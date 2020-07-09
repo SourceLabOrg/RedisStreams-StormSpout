@@ -11,6 +11,8 @@ import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.funnel.Message;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
+import org.sourcelab.storm.spout.redis.util.FactoryUtil;
+import org.sourcelab.storm.spout.redis.util.StormToClientConfigurationUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -65,7 +67,10 @@ public class RedisStreamSpout implements ISpout {
             spoutConfig, topologyContext
         );
 
-        // Open connection to redis
+        // Create message converter instance.
+        messageConverter = FactoryUtil.createNewInstance(config.getTupleConverterClass());
+
+        // Create funnel instance.
         this.funnel = new MemoryFunnel(config);
 
         // Create and connect client

@@ -1,8 +1,9 @@
-package org.sourcelab.storm.spout.redis;
+package org.sourcelab.storm.spout.redis.util;
 
 import org.apache.storm.task.TopologyContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sourcelab.storm.spout.redis.ClientConfiguration;
 
 import java.util.Map;
 import java.util.Objects;
@@ -23,8 +24,11 @@ public class StormToClientConfigurationUtil {
     public static String REDIS_CONSUMER_CONSUMER_ID_PREFIX = "redis_stream_spout.consumer.consumer_id_prefix";
     public static String REDIS_CONSUMER_STREAM_KEY = "redis_stream_spout.consumer.stream_key";
 
+    // Tuple Conversion
+    public static String REDIS_TUPLE_CONVERTER_CLASS = "redis_stream_spout.tuple_converter_class";
+
     // Other settings
-    // TODO
+    // TODO load remaining settings.
 
     public static ClientConfiguration load(final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
         Objects.requireNonNull(stormConfig);
@@ -34,10 +38,19 @@ public class StormToClientConfigurationUtil {
         validateRequiredKeys(stormConfig);
 
         final ClientConfiguration.Builder builder = ClientConfiguration.newBuilder();
+        loadTupleConverter(builder, stormConfig);
         loadServerSettings(builder, stormConfig);
         loadConsumerSettings(builder, stormConfig, topologyContext);
 
         return builder.build();
+    }
+
+    private static void loadTupleConverter(final ClientConfiguration.Builder builder, final Map<String, Object> stormConfig) {
+        String classStr = (String) stormConfig.get(REDIS_TUPLE_CONVERTER_CLASS);
+        if (classStr == null || classStr.trim().isEmpty()) {
+            throw new IllegalStateException("Invalid value for key '" + REDIS_TUPLE_CONVERTER_CLASS + "'");
+        }
+        builder.withTupleConverterClass(classStr);
     }
 
     private static void validateRequiredKeys(final Map<String, Object> stormConfig) {
@@ -46,7 +59,10 @@ public class StormToClientConfigurationUtil {
             REDIS_SERVER_HOST, REDIS_SERVER_PORT,
 
             // Consumer keys
-            REDIS_CONSUMER_GROUP_NAME, REDIS_CONSUMER_STREAM_KEY
+            REDIS_CONSUMER_GROUP_NAME, REDIS_CONSUMER_STREAM_KEY,
+
+            // Other
+            REDIS_TUPLE_CONVERTER_CLASS
         };
 
         for (final String requiredKey : requiredKeys) {
@@ -82,9 +98,10 @@ public class StormToClientConfigurationUtil {
             consumerIdPrefix = "storm_consumer";
         }
 
-        // TODO
-        // determine how many instances we have via topology context.
-        final int instanceId = 1;
+        // Determine how many instances we have via topology context.
+        final int instanceId = topologyContext.getThisTaskIndex();
+
+        // Define unique consumerId using prefix + instanceId
         builder.withConsumerId(consumerIdPrefix + instanceId);
     }
 }

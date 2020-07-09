@@ -28,17 +28,20 @@ public class ClientConfiguration {
     /**
      * Size of the internal buffer for consuming entries from redis.
      */
-    private int maxTupleQueueSize;
+    private final int maxTupleQueueSize;
 
     /**
      * Size of the internal buffer for acking entries.
      */
-    private int maxAckQueueSize;
+    private final int maxAckQueueSize;
 
     /**
      * How long should consumer delay between consuming batches.
      */
-    private long consumerDelayMillis;
+    private final long consumerDelayMillis;
+
+    private final String tupleConverterClass;
+
 
     public ClientConfiguration(
         // Redis Connection Properties
@@ -46,19 +49,20 @@ public class ClientConfiguration {
         // Consumer properties
         final String streamKey, final String groupName, final String consumerId,
         // Other settings
-        final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
+        final String tupleConverterClass, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
     ) {
         // Connection Details.
-        this.host = host;
+        this.host = Objects.requireNonNull(host);
         this.port = port;
         this.password = password;
 
         // Consumer Details
-        this.groupName = groupName;
-        this.consumerId = consumerId;
-        this.streamKey = streamKey;
+        this.groupName = Objects.requireNonNull(groupName);
+        this.consumerId = Objects.requireNonNull(consumerId);
+        this.streamKey = Objects.requireNonNull(streamKey);
 
         // Other settings
+        this.tupleConverterClass = Objects.requireNonNull(tupleConverterClass);
         this.maxTupleQueueSize = maxTupleQueueSize;
         this.maxAckQueueSize = maxAckQueueSize;
         this.consumerDelayMillis = consumerDelayMillis;
@@ -110,6 +114,10 @@ public class ClientConfiguration {
         return consumerDelayMillis;
     }
 
+    public String getTupleConverterClass() {
+        return tupleConverterClass;
+    }
+
     public static Builder newBuilder() {
         return new Builder();
     }
@@ -131,8 +139,9 @@ public class ClientConfiguration {
         private String streamKey;
 
         /**
-         * Other configuration proeprties with sane defaults.
+         * Other configuration proprties with sane defaults.
          */
+        private String tupleConverterClass;
         private int maxTupleQueueSize = 1024;
         private int maxAckQueueSize = 1024;
         private long consumerDelayMillis = 1000L;
@@ -195,6 +204,11 @@ public class ClientConfiguration {
             return this;
         }
 
+        public Builder withTupleConverterClass(final String classStr) {
+            this.tupleConverterClass = classStr;
+            return this;
+        }
+
         public ClientConfiguration build() {
             return new ClientConfiguration(
                 // Redis connection properties
@@ -202,8 +216,9 @@ public class ClientConfiguration {
                 // Consumer Properties
                 streamKey, groupName, consumerId,
                 // Other settings
-                maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
+                tupleConverterClass, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
             );
         }
+
     }
 }
