@@ -36,7 +36,7 @@ public class RedisStreamSpout implements ISpout {
     /**
      * Converts from a Message into a tuple.
      */
-    private MessageConverter messageConverter;
+    private TupleConverter messageConverter;
 
     /**
      * Underlying Client instance.
