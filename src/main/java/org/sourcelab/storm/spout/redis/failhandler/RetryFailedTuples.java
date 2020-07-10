@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.funnel.Message;
-import org.sourcelab.storm.spout.redis.util.StormToClientConfigurationUtil;
+import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * It uses two configuration properties:
  *
- * @see StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES to set max number of times a message will be retried.
+ * @see ConfigUtil.FAILURE_HANDLER_MAX_RETRIES to set max number of times a message will be retried.
  */
 public class RetryFailedTuples implements FailureHandler {
     private static final Logger logger = LoggerFactory.getLogger(RetryFailedTuples.class);
@@ -42,14 +42,14 @@ public class RetryFailedTuples implements FailureHandler {
         maxRetries = 10;
 
         // Attempt to parse value from config.
-        final Object value = stormConfig.getOrDefault(StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES, null);
+        final Object value = stormConfig.getOrDefault(ConfigUtil.FAILURE_HANDLER_MAX_RETRIES, null);
         if (value instanceof Number) {
             maxRetries = ((Number) value).intValue();
         } else if (value instanceof String) {
             maxRetries = Integer.parseInt((String) value);
         } else {
             throw new IllegalStateException(
-                "Invalid configuration value provided for '" + StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES + "' "
+                "Invalid configuration value provided for '" + ConfigUtil.FAILURE_HANDLER_MAX_RETRIES + "' "
                 + "Please enter valid number."
             );
         }

@@ -10,7 +10,7 @@ import java.util.Optional;
 /**
  * Utility class for building ClientConfiguration instances from Storm config maps.
  */
-public class StormToClientConfigurationUtil {
+public class ConfigUtil {
     // Connection Details
     public static final String REDIS_SERVER_HOST = "redis_stream_spout.server.host";
     public static final String REDIS_SERVER_PORT = "redis_stream_spout.server.port";
@@ -30,6 +30,7 @@ public class StormToClientConfigurationUtil {
     public static final String CONSUMER_MAX_ACK_QUEUE_SIZE = "redis_stream_spout.consumer.max_ack_queue_size";
 
     // Retry Failure Handler settings
+    public static final String FAILURE_HANDLER_CLASS = "redis_streams_spout.failure.handler_class";
     public static final String FAILURE_HANDLER_MAX_RETRIES = "redis_streams_spout.failure.max_retries";
 
     /**
@@ -43,7 +44,7 @@ public class StormToClientConfigurationUtil {
         REDIS_CONSUMER_GROUP_NAME, REDIS_CONSUMER_STREAM_KEY, REDIS_CONSUMER_CONSUMER_ID_PREFIX,
 
         // Other
-        TUPLE_CONVERTER_CLASS
+        FAILURE_HANDLER_CLASS, TUPLE_CONVERTER_CLASS
     };
 
     /**
@@ -63,12 +64,21 @@ public class StormToClientConfigurationUtil {
         // Create builder and populate it.
         final Configuration.Builder builder = Configuration.newBuilder();
         loadTupleConverter(builder, stormConfig);
+        loadFailureHandler(builder, stormConfig);
         loadServerSettings(builder, stormConfig);
         loadConsumerSettings(builder, stormConfig, topologyContext);
         loadOptionalSettings(builder, stormConfig);
 
         // Build instance.
         return builder.build();
+    }
+
+    private static void loadFailureHandler(final Configuration.Builder builder, final Map<String, Object> stormConfig) {
+        String classStr = (String) stormConfig.get(FAILURE_HANDLER_CLASS);
+        if (classStr == null || classStr.trim().isEmpty()) {
+            throw new IllegalStateException("Invalid value for key '" + FAILURE_HANDLER_CLASS + "'");
+        }
+        builder.withFailureHandlerClass(classStr);
     }
 
     private static void loadTupleConverter(final Configuration.Builder builder, final Map<String, Object> stormConfig) {

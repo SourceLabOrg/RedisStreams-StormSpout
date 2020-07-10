@@ -49,6 +49,11 @@ public class Configuration {
     private final String tupleConverterClass;
 
     /**
+     * Name of the class to use for handling failures.
+     */
+    private final String failureHandlerClass;
+
+    /**
      * Constructor.
      * See Builder instance.
      */
@@ -57,8 +62,11 @@ public class Configuration {
         final String host, final int port, final String password,
         // Consumer properties
         final String streamKey, final String groupName, final String consumerId,
+        // Classes
+        final String tupleConverterClass, final String failureHandlerClass,
+
         // Other settings
-        final String tupleConverterClass, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
+        final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
     ) {
         // Connection Details.
         this.host = Objects.requireNonNull(host);
@@ -70,8 +78,11 @@ public class Configuration {
         this.consumerId = Objects.requireNonNull(consumerId);
         this.streamKey = Objects.requireNonNull(streamKey);
 
-        // Other settings
+        // Classes
         this.tupleConverterClass = Objects.requireNonNull(tupleConverterClass);
+        this.failureHandlerClass = Objects.requireNonNull(failureHandlerClass);
+
+        // Other settings
         this.maxTupleQueueSize = maxTupleQueueSize;
         this.maxAckQueueSize = maxAckQueueSize;
         this.consumerDelayMillis = consumerDelayMillis;
@@ -131,6 +142,10 @@ public class Configuration {
         return tupleConverterClass;
     }
 
+    public String getFailureHandlerClass() {
+        return failureHandlerClass;
+    }
+
     /**
      * Create a new Builder instance.
      * @return Builder for Configuration instance.
@@ -161,6 +176,11 @@ public class Configuration {
          * Tuple Converter class.
          */
         private String tupleConverterClass;
+
+        /**
+         * Failure Handler class.
+         */
+        private String failureHandlerClass;
 
         /**
          * Other configuration properties with sane defaults.
@@ -240,6 +260,11 @@ public class Configuration {
             return this;
         }
 
+        public Builder withFailureHandlerClass(final String classStr) {
+            this.failureHandlerClass = classStr;
+            return this;
+        }
+
         /**
          * Creates new Configuration instance.
          * @return Configuration instance.
@@ -250,8 +275,10 @@ public class Configuration {
                 host, port, password,
                 // Consumer Properties
                 streamKey, groupName, consumerId,
+                // Classes
+                tupleConverterClass, failureHandlerClass,
                 // Other settings
-                tupleConverterClass, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
+                maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
             );
         }
     }

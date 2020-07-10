@@ -13,7 +13,7 @@ import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.funnel.Message;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
 import org.sourcelab.storm.spout.redis.util.FactoryUtil;
-import org.sourcelab.storm.spout.redis.util.StormToClientConfigurationUtil;
+import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
 import java.util.Map;
 import java.util.Objects;
@@ -64,7 +64,7 @@ public class RedisStreamSpout implements ISpout {
         this.collector = Objects.requireNonNull(spoutOutputCollector);
 
         // Create config
-        final Configuration config = StormToClientConfigurationUtil.load(
+        final Configuration config = ConfigUtil.load(
             spoutConfig, topologyContext
         );
 
