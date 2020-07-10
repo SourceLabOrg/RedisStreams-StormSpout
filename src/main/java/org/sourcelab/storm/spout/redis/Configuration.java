@@ -101,6 +101,10 @@ public class Configuration {
         return consumerId;
     }
 
+    /**
+     * Build a Redis connection string based on configured properties.
+     * @return Redis Connection string.
+     */
     public String getConnectString() {
         String connectStr = "redis://";
         if (getPassword() != null && !getPassword().trim().isEmpty()) {

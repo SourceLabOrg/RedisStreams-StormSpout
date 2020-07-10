@@ -99,7 +99,8 @@ public class StormToClientConfigurationUtil {
         }
     }
 
-    private static void loadConsumerSettings(final Configuration.Builder builder, final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
+    private static void loadConsumerSettings(
+        final Configuration.Builder builder, final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
         builder
             .withGroupName((String) stormConfig.get(REDIS_CONSUMER_GROUP_NAME))
             .withStreamKey((String) stormConfig.get(REDIS_CONSUMER_STREAM_KEY));

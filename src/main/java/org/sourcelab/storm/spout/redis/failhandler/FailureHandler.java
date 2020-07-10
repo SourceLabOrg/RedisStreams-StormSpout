@@ -7,6 +7,18 @@ import org.sourcelab.storm.spout.redis.funnel.Message;
  * Does NOT need to be thread safe as only accessed via a single thread.
  */
 public interface FailureHandler {
-    void addFailure(final Message object);
-    Message getTuple();
+    /**
+     * Handle a failed message.
+     * If the implementation wants to replay this tuple again in the future, it should return value of TRUE.
+     * If the implementation does NOT want to handle/replay this tuple in the future, it should return a value of FALSE.
+     * @param message The failed message.
+     * @return True if the implementation will replay this tuple again later, false if not.
+     */
+    boolean addFailure(final Message message);
+
+    /**
+     * Return a previously failed message to be replayed. or NULL if no such messages are ready to be replayed.
+     * @return Previously failed message or NULL.
+     */
+    Message getMessage();
 }

@@ -9,7 +9,6 @@ import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -70,7 +69,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     @Override
     public Message nextMessage() {
         // Should replay a failed tuple?
-        Message nextMessage = failureHandler.getTuple();
+        Message nextMessage = failureHandler.getMessage();
 
         // If the failureHandler has nothing to emit
         if (nextMessage == null) {

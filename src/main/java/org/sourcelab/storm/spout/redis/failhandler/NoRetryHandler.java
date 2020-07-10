@@ -2,6 +2,10 @@ package org.sourcelab.storm.spout.redis.failhandler;
 
 import org.sourcelab.storm.spout.redis.funnel.Message;
 
+/**
+ * No-op implementation.
+ * This FailureHandler will not replay failures at all.
+ */
 public class NoRetryHandler implements FailureHandler {
     @Override
     public void addFailure(final Message object) {
@@ -9,7 +13,7 @@ public class NoRetryHandler implements FailureHandler {
     }
 
     @Override
-    public Message getTuple() {
+    public Message getMessage() {
         return null;
     }
 }
