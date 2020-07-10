@@ -1,0 +1,13 @@
+language: java
+sudo: false
+dist: trusty
+jdk:
+  - oraclejdk8
+cache:
+  directories:
+  - $HOME/.m2
+script:
+  ## Run CheckStyle checks, compile, and install locally
+  - mvn clean install -DskipTests=true -DskipCheckStyle=false -Dmaven.javadoc.skip=true -B -V
+  ## Run Test Suite
+  - mvn test -B -DskipCheckStyle=true

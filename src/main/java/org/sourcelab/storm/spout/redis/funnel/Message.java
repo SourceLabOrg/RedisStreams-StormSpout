@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -19,7 +20,7 @@ public class Message {
      */
     public Message(final String id, final Map<String, String> message) {
         this.id = Objects.requireNonNull(id);
-        this.message = Objects.requireNonNull(message);
+        this.message = Collections.unmodifiableMap(Objects.requireNonNull(message));
     }
 
     public String getId() {
