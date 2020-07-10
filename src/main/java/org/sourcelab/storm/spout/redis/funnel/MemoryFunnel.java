@@ -99,6 +99,10 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         // Add to acked tuples queue,
         // If the queue is full, this will block.
         try {
+            // Notify the failure handler that this msgId was acked.
+            failureHandler.ack(msgId);
+
+            // Add to the ackQueue
             ackQueue.put(msgId);
         } catch (final InterruptedException exception) {
             logger.error("Interrupted while attempting to add to Ack Queue: {}", exception.getMessage(), exception);
@@ -125,8 +129,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         }
 
         // Add to failed tuples thing
-        failureHandler.addFailure(failedTuple);
-        return true;
+        return failureHandler.fail(failedTuple);
     }
 
     @Override

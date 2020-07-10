@@ -28,6 +28,9 @@ public class StormToClientConfigurationUtil {
     public static final String CONSUMER_MAX_TUPLE_QUEUE_SIZE = "redis_stream_spout.consumer.max_tuple_queue_size";
     public static final String CONSUMER_MAX_ACK_QUEUE_SIZE = "redis_stream_spout.consumer.max_ack_queue_size";
 
+    // Retry Failure Handler settings
+    public static final String FAILURE_HANDLER_MAX_RETRIES = "redis_streams_spout.failure.max_retries";
+
     /**
      * Required properties.
      */
