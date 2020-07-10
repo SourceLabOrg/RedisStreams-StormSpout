@@ -13,9 +13,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Handler which will replay failed tuples a maximum number of times.
  *
- * It uses two configuration properties:
+ * It uses one configuration properties:
  *
  * @see ConfigUtil.FAILURE_HANDLER_MAX_RETRIES to set max number of times a message will be retried.
+ * A value > 0 sets the upper limit on the numnber of times a message will fail before just being skipped.
+ * A value = 0 says failed messages will NEVER be replayed.
+ * A value < 0 says ALWAYS replay failed messages until they are successful.
  */
 public class RetryFailedTuples implements FailureHandler {
     private static final Logger logger = LoggerFactory.getLogger(RetryFailedTuples.class);
@@ -88,7 +91,19 @@ public class RetryFailedTuples implements FailureHandler {
     }
 
     private boolean shouldReplay(final String msgId) {
-        if (messageCounter.getOrDefault(msgId, 0L) > maxRetries) {
+        // If max retries is 0, we should never replay.
+        if (maxRetries == 0) {
+            return false;
+        }
+
+        // If max retries is less than 0
+        if (maxRetries < 0) {
+            // We should always replay
+            return true;
+        }
+
+        final long previousFailures = messageCounter.getOrDefault(msgId, 0L);
+        if (previousFailures >= maxRetries) {
             return false;
         }
         return true;
