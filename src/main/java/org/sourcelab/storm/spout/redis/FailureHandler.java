@@ -1,4 +1,4 @@
-package org.sourcelab.storm.spout.redis.failhandler;
+package org.sourcelab.storm.spout.redis;
 
 import org.sourcelab.storm.spout.redis.funnel.Message;
 

@@ -69,7 +69,7 @@ public class RedisStreamSpout implements ISpout {
         );
 
         // Create message converter instance.
-        messageConverter = FactoryUtil.createNewInstance(config.getTupleConverterClass());
+        messageConverter = FactoryUtil.newTupleConverter(config.getTupleConverterClass());
 
         // Create funnel instance.
         this.funnel = new MemoryFunnel(config);
