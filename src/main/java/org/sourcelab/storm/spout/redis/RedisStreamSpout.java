@@ -71,7 +71,7 @@ public class RedisStreamSpout implements ISpout {
         messageConverter = FactoryUtil.newTupleConverter(config.getTupleConverterClass());
 
         // Create funnel instance.
-        this.funnel = new MemoryFunnel(config);
+        this.funnel = new MemoryFunnel(config, spoutConfig);
 
         // Create and connect client
         client = new LettuceClient(config, (ConsumerFunnel) funnel);

@@ -6,6 +6,7 @@ import org.sourcelab.storm.spout.redis.Configuration;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
+import org.sourcelab.storm.spout.redis.util.FactoryUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
      * Constructor.
      * @param config configuration proeprties.
      */
-    public MemoryFunnel(final Configuration config) {
+    public MemoryFunnel(final Configuration config, final Map<String, Object> stormConfig) {
         Objects.requireNonNull(config);
 
         // This instance does NOT need to be concurrent.
@@ -63,8 +64,9 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         tupleQueue = new LinkedBlockingQueue<>(config.getMaxTupleQueueSize());
         ackQueue = new LinkedBlockingQueue<>(config.getMaxAckQueueSize());
 
-        // TODO alternative handlers
-        failureHandler = new NoRetryHandler();
+        // Create failure handler instance
+        failureHandler = FactoryUtil.newFailureHandler(config.getFailureHandlerClass());
+        failureHandler.open(stormConfig);
     }
 
     @Override
@@ -169,7 +171,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
      * @return Id of the message, or NULL if buffer is empty.
      */
     @Override
-    public String getNextAck() {
+    public String nextAck() {
         return ackQueue.poll();
     }
 

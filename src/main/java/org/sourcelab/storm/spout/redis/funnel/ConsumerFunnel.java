@@ -22,7 +22,7 @@ public interface ConsumerFunnel {
      * Get the next messageId that should be recorded as processed.
      * @return MessageId of message to record as having been processed.
      */
-    String getNextAck();
+    String nextAck();
 
     /**
      * Used to determine if the background consuming thread should stop processing and shut down.

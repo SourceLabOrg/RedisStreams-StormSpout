@@ -106,7 +106,7 @@ public class LettuceClient implements Client, Runnable {
                 .forEach(funnel::addMessage);
 
             // process acks
-            String msgId = funnel.getNextAck();
+            String msgId = funnel.nextAck();
             while (msgId != null) {
                 // Confirm that the message has been processed using XACK
                 syncCommands.xack(
@@ -116,7 +116,7 @@ public class LettuceClient implements Client, Runnable {
                 );
 
                 // Grab next msg to ack.
-                msgId = funnel.getNextAck();
+                msgId = funnel.nextAck();
             }
 
             // If configured with a delay

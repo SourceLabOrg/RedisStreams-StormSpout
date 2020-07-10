@@ -260,9 +260,17 @@ public class Configuration {
             return this;
         }
 
+        public Builder withTupleConverterClass(final Class<? extends TupleConverter> clazz) {
+            return withTupleConverterClass(clazz.getName());
+        }
+
         public Builder withFailureHandlerClass(final String classStr) {
             this.failureHandlerClass = classStr;
             return this;
+        }
+
+        public Builder withFailureHandlerClass(final Class<? extends FailureHandler> clazz) {
+            return withFailureHandlerClass(clazz.getName());
         }
 
         /**
