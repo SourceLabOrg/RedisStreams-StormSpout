@@ -3,7 +3,7 @@ package org.sourcelab.storm.spout.redis.failhandler;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.sourcelab.storm.spout.redis.funnel.Message;
+import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
 import java.util.Collections;

@@ -1,7 +1,6 @@
 package org.sourcelab.storm.spout.redis;
 
 import org.apache.storm.tuple.Values;
-import org.sourcelab.storm.spout.redis.funnel.Message;
 
 /**
  * Used to convert from a Redis Message into a tuple.

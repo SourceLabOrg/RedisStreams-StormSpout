@@ -1,4 +1,4 @@
-package org.sourcelab.storm.spout.redis.funnel;
+package org.sourcelab.storm.spout.redis;
 
 import java.util.Collections;
 import java.util.Map;

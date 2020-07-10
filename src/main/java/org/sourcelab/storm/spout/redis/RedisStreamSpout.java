@@ -10,7 +10,6 @@ import org.sourcelab.storm.spout.redis.client.Client;
 import org.sourcelab.storm.spout.redis.client.LettuceClient;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
-import org.sourcelab.storm.spout.redis.funnel.Message;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
 import org.sourcelab.storm.spout.redis.util.FactoryUtil;
 import org.sourcelab.storm.spout.redis.util.ConfigUtil;

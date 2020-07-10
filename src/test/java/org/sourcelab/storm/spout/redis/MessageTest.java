@@ -1,6 +1,7 @@
-package org.sourcelab.storm.spout.redis.funnel;
+package org.sourcelab.storm.spout.redis;
 
 import org.junit.jupiter.api.Test;
+import org.sourcelab.storm.spout.redis.Message;
 
 import java.util.HashMap;
 import java.util.Map;

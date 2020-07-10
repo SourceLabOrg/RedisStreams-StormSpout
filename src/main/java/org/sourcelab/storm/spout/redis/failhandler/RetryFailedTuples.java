@@ -3,7 +3,7 @@ package org.sourcelab.storm.spout.redis.failhandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.FailureHandler;
-import org.sourcelab.storm.spout.redis.funnel.Message;
+import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
 import java.util.HashMap;
@@ -15,10 +15,10 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * It uses one configuration properties:
  *
- * @see ConfigUtil.FAILURE_HANDLER_MAX_RETRIES to set max number of times a message will be retried.
- * A value > 0 sets the upper limit on the numnber of times a message will fail before just being skipped.
- * A value = 0 says failed messages will NEVER be replayed.
- * A value < 0 says ALWAYS replay failed messages until they are successful.
+ * {@link ConfigUtil.FAILURE_HANDLER_MAX_RETRIES} to set max number of times a message will be retried.
+ * A value greater than 0 sets the upper limit on the numnber of times a message will fail before just being skipped.
+ * A value equal to 0 says failed messages will NEVER be replayed.
+ * A value less than 0 says ALWAYS replay failed messages until they are successful.
  */
 public class RetryFailedTuples implements FailureHandler {
     private static final Logger logger = LoggerFactory.getLogger(RetryFailedTuples.class);

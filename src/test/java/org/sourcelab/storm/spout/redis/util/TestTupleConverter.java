@@ -1,10 +1,8 @@
 package org.sourcelab.storm.spout.redis.util;
 
 import org.apache.storm.tuple.Values;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.TupleConverter;
-import org.sourcelab.storm.spout.redis.funnel.Message;
+import org.sourcelab.storm.spout.redis.Message;
 
 import java.util.ArrayList;
 import java.util.List;

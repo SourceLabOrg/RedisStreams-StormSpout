@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.Configuration;
 import org.sourcelab.storm.spout.redis.FailureHandler;
+import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 
 import java.util.HashMap;

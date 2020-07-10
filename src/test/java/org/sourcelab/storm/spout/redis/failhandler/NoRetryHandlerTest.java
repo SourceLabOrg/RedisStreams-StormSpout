@@ -2,7 +2,7 @@ package org.sourcelab.storm.spout.redis.failhandler;
 
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.FailureHandler;
-import org.sourcelab.storm.spout.redis.funnel.Message;
+import org.sourcelab.storm.spout.redis.Message;
 
 import java.util.HashMap;
 

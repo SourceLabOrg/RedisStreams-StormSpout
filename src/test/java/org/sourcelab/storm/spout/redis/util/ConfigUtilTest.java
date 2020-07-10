@@ -21,7 +21,6 @@ class ConfigUtilTest {
      */
     @Test
     void test_loadFromMap_usingStringsForNumbers() {
-
         // Define input map
         final Map<String, Object> configMap = new HashMap<>();
 

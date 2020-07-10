@@ -1,5 +1,7 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
+import org.sourcelab.storm.spout.redis.Message;
+
 /**
  * Funnel from the Spout's point of view.
  *

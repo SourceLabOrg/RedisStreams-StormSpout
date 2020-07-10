@@ -10,7 +10,7 @@ import io.lettuce.core.api.sync.RedisCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.Configuration;
-import org.sourcelab.storm.spout.redis.funnel.Message;
+import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 
 import java.util.List;
