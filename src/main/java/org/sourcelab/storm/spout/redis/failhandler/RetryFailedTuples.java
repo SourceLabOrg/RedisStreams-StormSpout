@@ -15,7 +15,6 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * It uses two configuration properties:
  *
- * @see StormToClientConfigurationUtil.CONSUMER_MAX_TUPLE_QUEUE_SIZE to set the max capacity of the internal queue.
  * @see StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES to set max number of times a message will be retried.
  */
 public class RetryFailedTuples implements FailureHandler {
@@ -30,7 +29,7 @@ public class RetryFailedTuples implements FailureHandler {
     /**
      * Contains a FIFO queue for failed messages.
      */
-    private LinkedBlockingQueue<Message> messageQueue;
+    private LinkedBlockingQueue<Message> messageQueue = new LinkedBlockingQueue<>();
 
     /**
      * How many times a failed message should be replayed.
@@ -41,15 +40,19 @@ public class RetryFailedTuples implements FailureHandler {
     @Override
     public void open(final Map<String, Object> stormConfig) {
         maxRetries = 10;
-        if (stormConfig.containsKey(StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES)) {
-            maxRetries = ((Number) stormConfig.get(StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES)).intValue();
-        }
 
-        int maxCapacity = 1024;
-        if (stormConfig.containsKey(StormToClientConfigurationUtil.CONSUMER_MAX_TUPLE_QUEUE_SIZE)) {
-            maxCapacity = ((Number) stormConfig.get(StormToClientConfigurationUtil.CONSUMER_MAX_TUPLE_QUEUE_SIZE)).intValue();
+        // Attempt to parse value from config.
+        final Object value = stormConfig.getOrDefault(StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES, null);
+        if (value instanceof Number) {
+            maxRetries = ((Number) value).intValue();
+        } else if (value instanceof String) {
+            maxRetries = Integer.parseInt((String) value);
+        } else {
+            throw new IllegalStateException(
+                "Invalid configuration value provided for '" + StormToClientConfigurationUtil.FAILURE_HANDLER_MAX_RETRIES + "' "
+                + "Please enter valid number."
+            );
         }
-        messageQueue = new LinkedBlockingQueue<>(maxCapacity);
     }
 
     @Override

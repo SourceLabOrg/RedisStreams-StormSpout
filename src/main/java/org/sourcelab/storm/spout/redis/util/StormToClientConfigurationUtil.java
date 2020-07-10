@@ -5,6 +5,7 @@ import org.sourcelab.storm.spout.redis.Configuration;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Utility class for building ClientConfiguration instances from Storm config maps.
@@ -120,21 +121,24 @@ public class StormToClientConfigurationUtil {
 
     private static void loadOptionalSettings(final Configuration.Builder builder, final Map<String, Object> stormConfig) {
         // How long to delay between cycles in the consumer.
-        if (stormConfig.containsKey(CONSUMER_DELAY_MILLIS)) {
-            final Number delayMillis = (Number) stormConfig.get(CONSUMER_DELAY_MILLIS);
-            builder.withConsumerDelayMillis(delayMillis.longValue());
-        }
+        getValueAsNumber(stormConfig.get(CONSUMER_DELAY_MILLIS))
+            .ifPresent((number) -> builder.withConsumerDelayMillis(number.longValue()));
 
         // Size of internal bounded queue for processing acks.
-        if (stormConfig.containsKey(CONSUMER_MAX_ACK_QUEUE_SIZE)) {
-            final Number maxSize = (Number) stormConfig.get(CONSUMER_MAX_ACK_QUEUE_SIZE);
-            builder.withMaxAckQueueSize(maxSize.intValue());
-        }
+        getValueAsNumber(stormConfig.get(CONSUMER_MAX_ACK_QUEUE_SIZE))
+            .ifPresent((number) -> builder.withMaxAckQueueSize(number.intValue()));
 
         // Size of internal bounded queue for un-emitted tuples.
-        if (stormConfig.containsKey(CONSUMER_MAX_TUPLE_QUEUE_SIZE)) {
-            final Number maxSize = (Number) stormConfig.get(CONSUMER_MAX_TUPLE_QUEUE_SIZE);
-            builder.withMaxTupleQueueSize(maxSize.intValue());
+        getValueAsNumber(stormConfig.get(CONSUMER_MAX_TUPLE_QUEUE_SIZE))
+            .ifPresent((number) -> builder.withMaxTupleQueueSize(number.intValue()));
+    }
+
+    private static Optional<Number> getValueAsNumber(final Object value) {
+        if (value instanceof Number) {
+            return Optional.of((Number) value);
+        } else if (value instanceof String) {
+            return Optional.of(Long.parseLong((String) value));
         }
+        return Optional.empty();
     }
 }
