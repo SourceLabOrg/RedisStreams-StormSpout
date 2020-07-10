@@ -3,6 +3,7 @@ package org.sourcelab.storm.spout.redis;
 import org.apache.storm.spout.ISpout;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.client.Client;
@@ -14,8 +15,8 @@ import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
 import org.sourcelab.storm.spout.redis.util.FactoryUtil;
 import org.sourcelab.storm.spout.redis.util.StormToClientConfigurationUtil;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Redis Stream based Spout for Apache Storm 2.2.x.
@@ -59,11 +60,11 @@ public class RedisStreamSpout implements ISpout {
         final TopologyContext topologyContext,
         final SpoutOutputCollector spoutOutputCollector
     ) {
-        this.topologyContext = topologyContext;
-        this.collector = spoutOutputCollector;
+        this.topologyContext = Objects.requireNonNull(topologyContext);
+        this.collector = Objects.requireNonNull(spoutOutputCollector);
 
         // Create config
-        final ClientConfiguration config = StormToClientConfigurationUtil.load(
+        final Configuration config = StormToClientConfigurationUtil.load(
             spoutConfig, topologyContext
         );
 
@@ -79,17 +80,17 @@ public class RedisStreamSpout implements ISpout {
 
     @Override
     public void close() {
-        // Request stop
+        // Request stop, this will block until the client thread has terminated.
         funnel.requestStop();
     }
 
     @Override
-    public synchronized void activate() {
-        // Start thread, this should return immediately, but start a background thread.
+    public void activate() {
         if (consumerThread != null) {
-            throw new IllegalStateException("Cannot call run() more than once!");
+            // No-op.  It's already running, and deactivate() is a no-op for us.
+            return;
         }
-
+        // Start thread, this should return immediately, but start a background processing thread.
         // Create and start thread.
         consumerThread = new Thread(
             client,
@@ -100,21 +101,25 @@ public class RedisStreamSpout implements ISpout {
 
     @Override
     public void deactivate() {
-        // Pause consumption.
-        // Not implemented.  Will consume until buffer is full.
+        // Not implemented.  Background thread will consume until buffer is full and then block.
     }
 
     @Override
     public void nextTuple() {
-        // Pop next tuple from stream.
-        final Message nextMessage = funnel.nextTuple();
+        // Pop next message from funnel.
+        final Message nextMessage = funnel.nextMessage();
+
+        // If the funnel has no message
         if (nextMessage == null) {
+            // Nothing to do.
             return;
         }
 
-        // Build tuple.
-        final List<Object> tuple = messageConverter.createTuple(nextMessage);
+        // Build tuple from the message.
+        final Values tuple = messageConverter.createTuple(nextMessage);
         if (tuple == null) {
+            // If null returned, then we should ack the message and return
+            funnel.ackMessage(nextMessage.getId());
             return;
         }
 
@@ -142,8 +147,8 @@ public class RedisStreamSpout implements ISpout {
             return;
         }
 
-        // Track the msgId.
-        funnel.ackTuple((String) msgId);
+        // Ack the msgId.
+        funnel.ackMessage((String) msgId);
     }
 
     @Override
@@ -158,7 +163,7 @@ public class RedisStreamSpout implements ISpout {
             return;
         }
 
-        // Track the msgId.
-        funnel.failTuple((String) msgId);
+        // Fail the msgId.
+        funnel.failMessage((String) msgId);
     }
 }

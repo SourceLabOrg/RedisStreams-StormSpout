@@ -2,7 +2,10 @@ package org.sourcelab.storm.spout.redis;
 
 import java.util.Objects;
 
-public class ClientConfiguration {
+/**
+ * Configuration properties for the spout.
+ */
+public class Configuration {
     /**
      * Redis server details.
      */
@@ -40,10 +43,16 @@ public class ClientConfiguration {
      */
     private final long consumerDelayMillis;
 
+    /**
+     * Name of the class to use for converting Stream messages into Tuples.
+     */
     private final String tupleConverterClass;
 
-
-    public ClientConfiguration(
+    /**
+     * Constructor.
+     * See Builder instance.
+     */
+    public Configuration(
         // Redis Connection Properties
         final String host, final int port, final String password,
         // Consumer properties
@@ -118,11 +127,17 @@ public class ClientConfiguration {
         return tupleConverterClass;
     }
 
+    /**
+     * Create a new Builder instance.
+     * @return Builder for Configuration instance.
+     */
     public static Builder newBuilder() {
         return new Builder();
     }
 
-
+    /**
+     * Builder for Configuration instance.
+     */
     public static final class Builder {
         /**
          * Connection details.
@@ -139,9 +154,13 @@ public class ClientConfiguration {
         private String streamKey;
 
         /**
-         * Other configuration proprties with sane defaults.
+         * Tuple Converter class.
          */
         private String tupleConverterClass;
+
+        /**
+         * Other configuration properties with sane defaults.
+         */
         private int maxTupleQueueSize = 1024;
         private int maxAckQueueSize = 1024;
         private long consumerDelayMillis = 1000L;
@@ -149,12 +168,20 @@ public class ClientConfiguration {
         private Builder() {
         }
 
-        public Builder withHost(String host) {
+        public Builder withHost(final String host) {
             this.host = host;
             return this;
         }
 
-        public Builder withPort(Object port) {
+        /**
+         * Set the port parameter.  Attempts to handle input in both
+         * Number or String input.
+         *
+         * @param port Port value.
+         * @return Builder instance.
+         * @throws IllegalArgumentException if passed a non-number representation value.
+         */
+        public Builder withPort(final Object port) {
             Objects.requireNonNull(port);
             if (port instanceof Number) {
                 return withPort(((Number) port).intValue());
@@ -164,37 +191,37 @@ public class ClientConfiguration {
             throw new IllegalArgumentException("Port must be a Number!");
         }
 
-        public Builder withPort(int port) {
+        public Builder withPort(final int port) {
             this.port = port;
             return this;
         }
 
-        public Builder withPassword(String password) {
+        public Builder withPassword(final String password) {
             this.password = password;
             return this;
         }
 
-        public Builder withStreamKey(String key) {
+        public Builder withStreamKey(final String key) {
             this.streamKey = key;
             return this;
         }
 
-        public Builder withGroupName(String groupName) {
+        public Builder withGroupName(final String groupName) {
             this.groupName = groupName;
             return this;
         }
 
-        public Builder withConsumerId(String consumerId) {
+        public Builder withConsumerId(final String consumerId) {
             this.consumerId = consumerId;
             return this;
         }
 
-        public Builder withMaxTupleQueueSize(int limit) {
+        public Builder withMaxTupleQueueSize(final int limit) {
             this.maxTupleQueueSize = limit;
             return this;
         }
 
-        public Builder withMaxAckQueueSize(int limit) {
+        public Builder withMaxAckQueueSize(final int limit) {
             this.maxAckQueueSize = limit;
             return this;
         }
@@ -209,8 +236,12 @@ public class ClientConfiguration {
             return this;
         }
 
-        public ClientConfiguration build() {
-            return new ClientConfiguration(
+        /**
+         * Creates new Configuration instance.
+         * @return Configuration instance.
+         */
+        public Configuration build() {
+            return new Configuration(
                 // Redis connection properties
                 host, port, password,
                 // Consumer Properties
@@ -219,6 +250,5 @@ public class ClientConfiguration {
                 tupleConverterClass, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
             );
         }
-
     }
 }

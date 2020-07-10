@@ -9,7 +9,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.ClientConfiguration;
+import org.sourcelab.storm.spout.redis.Configuration;
 import org.sourcelab.storm.spout.redis.funnel.Message;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 
@@ -25,7 +25,7 @@ public class LettuceClient implements Client, Runnable {
     /**
      * Configuration properties for the client.
      */
-    private final ClientConfiguration config;
+    private final Configuration config;
 
     /**
      * The underlying Redis Client.
@@ -42,7 +42,7 @@ public class LettuceClient implements Client, Runnable {
      * @param config Configuration.
      * @param funnel Funnel instance.
      */
-    public LettuceClient(final ClientConfiguration config, final ConsumerFunnel funnel) {
+    public LettuceClient(final Configuration config, final ConsumerFunnel funnel) {
         this(
             config,
             RedisClient.create(config.getConnectString()),
@@ -56,12 +56,17 @@ public class LettuceClient implements Client, Runnable {
      * @param redisClient RedisClient instance.
      * @param funnel Funnel instance.
      */
-    LettuceClient(final ClientConfiguration config, final RedisClient redisClient, final ConsumerFunnel funnel) {
+    LettuceClient(final Configuration config, final RedisClient redisClient, final ConsumerFunnel funnel) {
         this.config = Objects.requireNonNull(config);
         this.redisClient = Objects.requireNonNull(redisClient);
         this.funnel = Objects.requireNonNull(funnel);
     }
 
+    /**
+     * Intended to be run by a background processing Thread.
+     * This will continue running and not return until the Funnel has notified
+     * this thread to stop.
+     */
     @Override
     public void run() {
         // Connect
@@ -94,10 +99,11 @@ public class LettuceClient implements Client, Runnable {
             // Loop over each message
             messages.stream()
                 // Map into Message Object
+                // TODO is streamMsg.getId() universally unique?? Or does it repeat?
                 .map((streamMsg) -> new Message(streamMsg.getId(), streamMsg.getBody()))
                 // And push into the funnel.
                 // This operation can block if the queue is full.
-                .forEach(funnel::addTuple);
+                .forEach(funnel::addMessage);
 
             // process acks
             String msgId = funnel.getNextAck();

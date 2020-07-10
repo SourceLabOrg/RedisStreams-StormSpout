@@ -2,6 +2,9 @@ package org.sourcelab.storm.spout.redis.util;
 
 import java.util.Objects;
 
+/**
+ * Utility class for creating new instances.
+ */
 public class FactoryUtil {
 
     /**
@@ -17,7 +20,7 @@ public class FactoryUtil {
             @SuppressWarnings("unchecked")
             final Class<? extends T> clazz = (Class<? extends T>) Class.forName(classStr);
             return clazz.newInstance();
-        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+        } catch (final ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             throw new RuntimeException(e);
         }
     }

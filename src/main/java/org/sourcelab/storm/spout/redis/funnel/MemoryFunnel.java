@@ -2,7 +2,7 @@ package org.sourcelab.storm.spout.redis.funnel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.ClientConfiguration;
+import org.sourcelab.storm.spout.redis.Configuration;
 import org.sourcelab.storm.spout.redis.failhandler.FailureHandler;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 
@@ -14,7 +14,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Funnels tuples and acks between the Spout thread and the Consumer thread.
+ * Funnels tuples and acks between the Spout thread and the Consumer thread in a
+ * thread safe manner.
  */
 public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     private static final Logger logger = LoggerFactory.getLogger(MemoryFunnel.class);
@@ -23,19 +24,19 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
      * Tracks Tuples in Flight.
      * Does NOT need to be concurrent because only modified via Spout side.
      */
-    private final Map<String, Message> inFlightTuples = new HashMap<>();
+    private final Map<String, Message> inFlightTuples;
 
     /**
      * BlockingQueue for tuples.
      * Needs to be concurrent because it is modified by both threads.
      */
-    private final Queue<Message> tupleQueue;
+    private final LinkedBlockingQueue<Message> tupleQueue;
 
     /**
      * BlockingQueue for acks.
      * Needs to be concurrent because it is modified by both threads.
      */
-    private final Queue<String> ackQueue;
+    private final LinkedBlockingQueue<String> ackQueue;
 
     /**
      * How to handle failures.
@@ -52,19 +53,26 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
      * Constructor.
      * @param config configuration proeprties.
      */
-    public MemoryFunnel(final ClientConfiguration config) {
+    public MemoryFunnel(final Configuration config) {
         Objects.requireNonNull(config);
 
+        // This instance does NOT need to be concurrent.
+        inFlightTuples = new HashMap<>(config.getMaxTupleQueueSize());
+
+        // These DO need to be concurrent.
         tupleQueue = new LinkedBlockingQueue<>(config.getMaxTupleQueueSize());
         ackQueue = new LinkedBlockingQueue<>(config.getMaxAckQueueSize());
+
+        // TODO alternative handlers
         failureHandler = new NoRetryHandler();
     }
 
     @Override
-    public Message nextTuple() {
+    public Message nextMessage() {
         // Should replay a failed tuple?
         Message nextMessage = failureHandler.getTuple();
 
+        // If the failureHandler has nothing to emit
         if (nextMessage == null) {
             // Pop off of tuple queue
             nextMessage = tupleQueue.poll();
@@ -84,13 +92,18 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     }
 
     @Override
-    public boolean ackTuple(final String msgId) {
+    public boolean ackMessage(final String msgId) {
         if (msgId == null) {
             return false;
         }
 
-        // Add to acked tuples queue
-        ackQueue.offer(msgId);
+        // Add to acked tuples queue,
+        // If the queue is full, this will block.
+        try {
+            ackQueue.put(msgId);
+        } catch (final InterruptedException exception) {
+            logger.error("Interrupted while attempting to add to Ack Queue: {}", exception.getMessage(), exception);
+        }
 
         // remove from inflight tuples map.
         inFlightTuples.remove(msgId);
@@ -99,7 +112,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     }
 
     @Override
-    public boolean failTuple(final String msgId) {
+    public boolean failMessage(final String msgId) {
         if (msgId == null) {
             return false;
         }
@@ -124,18 +137,34 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         // Wait until stopped.
         while (!isRunning.get()) {
             try {
-                Thread.sleep(2500L);
+                Thread.sleep(250L);
             } catch (InterruptedException e) {
                 break;
             }
         }
     }
 
+    /**
+     * Add a message to the queue.
+     * By design this will block once the buffer becomes full to apply backpressure to
+     * the consumer thread.
+     */
     @Override
-    public boolean addTuple(final Message message) {
-        return tupleQueue.offer(message);
+    public boolean addMessage(final Message message) {
+        // This may block.
+        try {
+            tupleQueue.put(message);
+            return true;
+        } catch (final InterruptedException exception) {
+            logger.error("Interrupted while attempting to add to Message Queue: {}", exception.getMessage(), exception);
+        }
+        return false;
     }
 
+    /**
+     * Get the next MessageId that has been marked as successfully completed.
+     * @return Id of the message, or NULL if buffer is empty.
+     */
     @Override
     public String getNextAck() {
         return ackQueue.poll();
