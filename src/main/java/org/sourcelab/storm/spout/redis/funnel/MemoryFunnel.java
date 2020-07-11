@@ -132,7 +132,15 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         }
 
         // Add to failed tuples thing
-        return failureHandler.fail(failedTuple);
+        final boolean result = failureHandler.fail(failedTuple);
+
+        // If the result is false, we should ack the message
+        if (result == false) {
+            ackMessage(msgId);
+        }
+
+        // And return the result
+        return result;
     }
 
     @Override

@@ -162,9 +162,7 @@ public class RedisStreamSpout implements ISpout {
             return;
         }
 
-        // Fail the msgId.
-        if (!funnel.failMessage((String) msgId)) {
-            funnel.ackMessage((String) msgId);
-        }
+        // Fail the msgId
+        funnel.failMessage((String) msgId);
     }
 }
