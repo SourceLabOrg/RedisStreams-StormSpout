@@ -192,4 +192,12 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     public void setIsRunning(boolean state) {
         isRunning.set(state);
     }
+
+    /**
+     * Accessor for running state.
+     * @return true if the client thread is processing, false if not.
+     */
+    public boolean isRunning() {
+        return isRunning.get();
+    }
 }

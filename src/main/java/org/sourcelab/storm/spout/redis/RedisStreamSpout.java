@@ -6,8 +6,9 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.client.Client;
+import org.sourcelab.storm.spout.redis.client.Consumer;
 import org.sourcelab.storm.spout.redis.client.LettuceClient;
+import org.sourcelab.storm.spout.redis.client.Client;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
@@ -39,11 +40,6 @@ public class RedisStreamSpout implements ISpout {
     private TupleConverter messageConverter;
 
     /**
-     * Underlying Client instance.
-     */
-    private Client client;
-
-    /**
      * Thread-Safe interface for passing messages between the Redis Stream thread and Spout Thread.
      */
     private SpoutFunnel funnel;
@@ -73,8 +69,14 @@ public class RedisStreamSpout implements ISpout {
         // Create funnel instance.
         this.funnel = new MemoryFunnel(config, spoutConfig);
 
-        // Create and connect client
-        client = new LettuceClient(config, (ConsumerFunnel) funnel);
+        // Create consumer and client
+        final Client client = new LettuceClient(config);
+        final Consumer consumer = new Consumer(config, client, (ConsumerFunnel) funnel);
+
+        consumerThread = new Thread(
+            consumer,
+            "RedisStreamSpout-ConsumerThread"
+        );
     }
 
     @Override
@@ -90,11 +92,6 @@ public class RedisStreamSpout implements ISpout {
             return;
         }
         // Start thread, this should return immediately, but start a background processing thread.
-        // Create and start thread.
-        consumerThread = new Thread(
-            client,
-            "RedisStreamSpout-ConsumerThread"
-        );
         consumerThread.start();
     }
 

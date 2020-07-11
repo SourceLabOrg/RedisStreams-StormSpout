@@ -3,6 +3,7 @@ package org.sourcelab.storm.spout.redis.client;
 import io.lettuce.core.Consumer;
 import io.lettuce.core.RedisBusyException;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -11,15 +12,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.Configuration;
 import org.sourcelab.storm.spout.redis.Message;
-import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Redis Stream Consumer using the Lettuce RedisLabs java library.
  */
-public class LettuceClient implements Client, Runnable {
+public class LettuceClient implements Client {
     private static final Logger logger = LoggerFactory.getLogger(LettuceClient.class);
 
     /**
@@ -32,21 +33,19 @@ public class LettuceClient implements Client, Runnable {
      */
     private final RedisClient redisClient;
 
-    /**
-     * For thread safe communication between this client thread and the spout thread.
-     */
-    private final ConsumerFunnel funnel;
+
+    private StatefulRedisConnection<String, String> connection;
+
+    private RedisCommands<String, String> syncCommands;
 
     /**
      * Constructor.
      * @param config Configuration.
-     * @param funnel Funnel instance.
      */
-    public LettuceClient(final Configuration config, final ConsumerFunnel funnel) {
+    public LettuceClient(final Configuration config) {
         this(
             config,
-            RedisClient.create(config.getConnectString()),
-            funnel
+            RedisClient.create(config.getConnectString())
         );
     }
 
@@ -54,27 +53,21 @@ public class LettuceClient implements Client, Runnable {
      * Protected constructor for injecting a RedisClient instance, typically for tests.
      * @param config Configuration.
      * @param redisClient RedisClient instance.
-     * @param funnel Funnel instance.
      */
-    LettuceClient(final Configuration config, final RedisClient redisClient, final ConsumerFunnel funnel) {
+    LettuceClient(final Configuration config, final RedisClient redisClient) {
         this.config = Objects.requireNonNull(config);
         this.redisClient = Objects.requireNonNull(redisClient);
-        this.funnel = Objects.requireNonNull(funnel);
     }
 
-    /**
-     * Intended to be run by a background processing Thread.
-     * This will continue running and not return until the Funnel has notified
-     * this thread to stop.
-     */
     @Override
-    public void run() {
-        // Connect
-        final StatefulRedisConnection<String, String> connection = redisClient.connect();
-        final RedisCommands<String, String> syncCommands = connection.sync();
+    public void connect() {
+        if (connection != null) {
+            throw new IllegalStateException("Cannot call connect more than once!");
+        }
 
-        // flip running flag.
-        funnel.setIsRunning(true);
+        // Connect
+        connection = redisClient.connect();
+        syncCommands = connection.sync();
 
         try {
             // Attempt to create consumer group
@@ -85,57 +78,52 @@ public class LettuceClient implements Client, Runnable {
         }
         catch (final RedisBusyException redisBusyException) {
             // Consumer group already exists, that's ok. Just swallow this.
-            logger.debug("Group {} already exists.", config.getGroupName());
+            logger.debug("Group {} for key {} already exists.", config.getGroupName(), config.getStreamKey());
         }
-
-        logger.info("Starting to consume new messages from {}", config.getStreamKey());
-        while (!funnel.shouldStop()) {
-            // Get next batch of messages.
-            final List<StreamMessage<String, String>> messages = syncCommands.xreadgroup(
-                Consumer.from(config.getGroupName(), config.getConsumerId()),
-                XReadArgs.StreamOffset.lastConsumed(config.getStreamKey())
+        catch (final RedisCommandExecutionException exception) {
+            logger.error(
+                "Key {} does not exist or is invalid! {}",
+                config.getStreamKey(), exception.getMessage(), exception
             );
 
-            // Loop over each message
-            messages.stream()
-                // Map into Message Object
-                // TODO is streamMsg.getId() universally unique?? Or does it repeat?
-                .map((streamMsg) -> new Message(streamMsg.getId(), streamMsg.getBody()))
-                // And push into the funnel.
-                // This operation can block if the queue is full.
-                .forEach(funnel::addMessage);
-
-            // process acks
-            String msgId = funnel.nextAck();
-            while (msgId != null) {
-                // Confirm that the message has been processed using XACK
-                syncCommands.xack(
-                    config.getStreamKey(),
-                    config.getGroupName(),
-                    msgId
-                );
-
-                // Grab next msg to ack.
-                msgId = funnel.nextAck();
-            }
-
-            // If configured with a delay
-            if (config.getConsumerDelayMillis() > 0) {
-                // Small delay.
-                try {
-                    Thread.sleep(config.getConsumerDelayMillis());
-                } catch (final InterruptedException exception) {
-                    logger.info("Caught interrupt, stopping consumer", exception);
-                    break;
-                }
-            }
+            // Re-throw exception
+            throw exception;
         }
+    }
 
+    @Override
+    public List<Message> nextMessages() {
+        // Get next batch of messages.
+        final List<StreamMessage<String, String>> messages = syncCommands.xreadgroup(
+            Consumer.from(config.getGroupName(), config.getConsumerId()),
+            XReadArgs.StreamOffset.lastConsumed(config.getStreamKey())
+        );
+
+        // Loop over each message
+        return messages.stream()
+            // Map into Message Object
+            // TODO is streamMsg.getId() universally unique?? Or does it repeat?
+            .map((streamMsg) -> new Message(streamMsg.getId(), streamMsg.getBody()))
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public void commitMessage(final String msgId) {
+        // Confirm that the message has been processed using XACK
+        syncCommands.xack(
+            config.getStreamKey(),
+            config.getGroupName(),
+            msgId
+        );
+    }
+
+    @Override
+    public void disconnect() {
         // Close our connection and shutdown.
-        connection.close();
+        if (connection != null) {
+            connection.close();
+            connection = null;
+        }
         redisClient.shutdown();
-
-        // Flip running flag to false to signal to spout.
-        funnel.setIsRunning(false);
     }
 }
