@@ -5,6 +5,7 @@ import io.lettuce.core.RedisBusyException;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.StreamMessage;
+import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -33,10 +34,18 @@ public class LettuceClient implements Client {
      */
     private final RedisClient redisClient;
 
-
+    /**
+     * Underlying connection objects
+     */
     private StatefulRedisConnection<String, String> connection;
-
     private RedisCommands<String, String> syncCommands;
+
+    /**
+     * Re-usable instance to prevent unnecessary garbage creation.
+     */
+    private final XReadArgs xReadArgs;
+    private final Consumer<String> consumerFrom;
+    private final XReadArgs.StreamOffset<String> lastConsumed;
 
     /**
      * Constructor.
@@ -57,6 +66,19 @@ public class LettuceClient implements Client {
     LettuceClient(final Configuration config, final RedisClient redisClient) {
         this.config = Objects.requireNonNull(config);
         this.redisClient = Objects.requireNonNull(redisClient);
+
+        // Create re-usable xReadArgs object.
+        xReadArgs = XReadArgs.Builder.noack()
+            // Define limit on number of messages to read per request
+            .count(config.getMaxConsumePerRead())
+            // Require Acks
+            .noack(false);
+
+        // Create re-usable ConsumerFrom instance.
+        consumerFrom = Consumer.from(config.getGroupName(), config.getConsumerId());
+
+        // Create re-usable lastConsumed instance.
+        lastConsumed = XReadArgs.StreamOffset.lastConsumed(config.getStreamKey());
     }
 
     @Override
@@ -72,8 +94,13 @@ public class LettuceClient implements Client {
         try {
             // Attempt to create consumer group
             syncCommands.xgroupCreate(
+                // Start the group at first offset for our key.
                 XReadArgs.StreamOffset.from(config.getStreamKey(), "0-0"),
-                config.getGroupName()
+                // Define the group name
+                config.getGroupName(),
+                // Create the stream if it doesn't already exist.
+                XGroupCreateArgs.Builder
+                    .mkstream(true)
             );
         }
         catch (final RedisBusyException redisBusyException) {
@@ -95,14 +122,14 @@ public class LettuceClient implements Client {
     public List<Message> nextMessages() {
         // Get next batch of messages.
         final List<StreamMessage<String, String>> messages = syncCommands.xreadgroup(
-            Consumer.from(config.getGroupName(), config.getConsumerId()),
-            XReadArgs.StreamOffset.lastConsumed(config.getStreamKey())
+            consumerFrom,
+            xReadArgs,
+            lastConsumed
         );
 
         // Loop over each message
         return messages.stream()
             // Map into Message Object
-            // TODO is streamMsg.getId() universally unique?? Or does it repeat?
             .map((streamMsg) -> new Message(streamMsg.getId(), streamMsg.getBody()))
             .collect(Collectors.toList());
     }

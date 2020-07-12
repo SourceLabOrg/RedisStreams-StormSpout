@@ -29,6 +29,11 @@ public class Configuration {
     private final String consumerId;
 
     /**
+     * Maximum number of messages to read per consume.
+     */
+    private final int maxConsumePerRead;
+
+    /**
      * Size of the internal buffer for consuming entries from redis.
      */
     private final int maxTupleQueueSize;
@@ -66,7 +71,7 @@ public class Configuration {
         final String tupleConverterClass, final String failureHandlerClass,
 
         // Other settings
-        final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
+        final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
     ) {
         // Connection Details.
         this.host = Objects.requireNonNull(host);
@@ -83,6 +88,7 @@ public class Configuration {
         this.failureHandlerClass = Objects.requireNonNull(failureHandlerClass);
 
         // Other settings
+        this.maxConsumePerRead = maxConsumePerRead;
         this.maxTupleQueueSize = maxTupleQueueSize;
         this.maxAckQueueSize = maxAckQueueSize;
         this.consumerDelayMillis = consumerDelayMillis;
@@ -110,6 +116,10 @@ public class Configuration {
 
     public String getConsumerId() {
         return consumerId;
+    }
+
+    public int getMaxConsumePerRead() {
+        return maxConsumePerRead;
     }
 
     /**
@@ -185,6 +195,7 @@ public class Configuration {
         /**
          * Other configuration properties with sane defaults.
          */
+        private int maxConsumePerRead = 512;
         private int maxTupleQueueSize = 1024;
         private int maxAckQueueSize = 1024;
         private long consumerDelayMillis = 1000L;
@@ -240,6 +251,11 @@ public class Configuration {
             return this;
         }
 
+        public Builder withMaxConsumePerRead(final int limit) {
+            this.maxConsumePerRead = limit;
+            return this;
+        }
+
         public Builder withMaxTupleQueueSize(final int limit) {
             this.maxTupleQueueSize = limit;
             return this;
@@ -286,7 +302,7 @@ public class Configuration {
                 // Classes
                 tupleConverterClass, failureHandlerClass,
                 // Other settings
-                maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
+                maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
             );
         }
     }
