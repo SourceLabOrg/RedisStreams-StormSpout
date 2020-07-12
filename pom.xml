@@ -57,6 +57,9 @@
         <!-- test toggling -->
         <skipTests>false</skipTests>
         <skipCheckStyle>false</skipCheckStyle>
+
+        <!-- By default, exclude integration tests -->
+        <excludeTests>Integration</excludeTests>
     </properties>
 
     <dependencies>
@@ -187,6 +190,10 @@
                 <version>${surefireVersion}</version>
                 <configuration>
                     <skipTests>${skipTests}</skipTests>
+                    <!-- By default exclude Integration Tests -->
+                    <excludedGroups>
+                        ${excludeTests}
+                    </excludedGroups>
                 </configuration>
             </plugin>
             <plugin>

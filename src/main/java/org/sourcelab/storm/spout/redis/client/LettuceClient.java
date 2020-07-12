@@ -35,7 +35,7 @@ public class LettuceClient implements Client {
     private final RedisClient redisClient;
 
     /**
-     * Underlying connection objects
+     * Underlying connection objects.
      */
     private StatefulRedisConnection<String, String> connection;
     private RedisCommands<String, String> syncCommands;
@@ -43,7 +43,7 @@ public class LettuceClient implements Client {
     /**
      * Re-usable instance to prevent unnecessary garbage creation.
      */
-    private final XReadArgs xReadArgs;
+    private final XReadArgs xreadArgs;
     private final Consumer<String> consumerFrom;
     private final XReadArgs.StreamOffset<String> lastConsumed;
 
@@ -68,7 +68,7 @@ public class LettuceClient implements Client {
         this.redisClient = Objects.requireNonNull(redisClient);
 
         // Create re-usable xReadArgs object.
-        xReadArgs = XReadArgs.Builder.noack()
+        xreadArgs = XReadArgs.Builder.noack()
             // Define limit on number of messages to read per request
             .count(config.getMaxConsumePerRead())
             // Require Acks
@@ -123,7 +123,7 @@ public class LettuceClient implements Client {
         // Get next batch of messages.
         final List<StreamMessage<String, String>> messages = syncCommands.xreadgroup(
             consumerFrom,
-            xReadArgs,
+            xreadArgs,
             lastConsumed
         );
 

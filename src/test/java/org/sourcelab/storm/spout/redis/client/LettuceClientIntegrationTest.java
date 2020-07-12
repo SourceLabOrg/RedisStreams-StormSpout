@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
-@Tag("IntegrationTest")
+@Tag("Integration")
 class LettuceClientIntegrationTest {
     /**
      * This test depends ont he following Redis Container.
