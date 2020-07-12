@@ -1,6 +1,5 @@
 package org.sourcelab.storm.spout.redis.client;
 
-import io.lettuce.core.XReadArgs;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -14,13 +13,10 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -254,6 +250,55 @@ class LettuceClientIntegrationTest {
             // Make sure we always disconnect client 2
             client2.disconnect();
         }
+    }
+
+    /**
+     * Simple connect, consume, commit, and disconnect smoke test.
+     */
+    @Test
+    void testSimpleConsumeMultipleMessages_withReconnect() {
+        // Connect
+        client.connect();
+
+        // Ask for messages.
+        List<Message> messages = client.nextMessages();
+        assertNotNull(messages, "Should be non-null");
+        assertTrue(messages.isEmpty(), "Should be empty");
+
+        // Now Submit more messages to the stream
+        List<String> expectedMessageIds = redisTestHelper.produceMessages(streamKey, MAX_CONSUMED_PER_READ);
+
+        // Ask for the next messages
+        messages = client.nextMessages();
+
+        // Validate
+        verifyConsumedMessagesInOrder(expectedMessageIds, messages);
+
+        // Commit each
+        messages.stream()
+            .map(Message::getId)
+            .forEach((msgId) -> client.commitMessage(msgId));
+
+        // Ask for messages, should be empty
+        messages = client.nextMessages();
+        assertNotNull(messages, "Should be non-null");
+        assertEquals(0, messages.size(), "Should be empty");
+
+        // Disconnect client.
+        client.disconnect();
+
+        // Write more messages to stream while client is disconnected.
+        expectedMessageIds = redisTestHelper.produceMessages(streamKey, MAX_CONSUMED_PER_READ);
+
+        // Create new client using the same client
+        final LettuceClient client2 = new LettuceClient(config);
+        client2.connect();
+
+        // Consume messages, should be the messages we got.
+        messages = client2.nextMessages();
+        verifyConsumedMessagesInOrder(expectedMessageIds, messages);
+
+        client2.disconnect();
     }
 
     private void verifyConsumedMessagesInOrder(final List<String> expectedMessageIds, final List<Message> foundMessages) {
