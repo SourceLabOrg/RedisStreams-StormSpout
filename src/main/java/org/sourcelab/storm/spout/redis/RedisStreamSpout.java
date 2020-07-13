@@ -3,7 +3,6 @@ package org.sourcelab.storm.spout.redis;
 import org.apache.storm.spout.ISpout;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.client.Consumer;
@@ -12,8 +11,6 @@ import org.sourcelab.storm.spout.redis.client.Client;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
-import org.sourcelab.storm.spout.redis.util.FactoryUtil;
-import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +23,16 @@ public class RedisStreamSpout implements ISpout {
     private static final Logger logger = LoggerFactory.getLogger(RedisStreamSpout.class);
 
     /**
+     * Configuration Properties for the Spout.
+     */
+    private final RedisStreamSpoutConfig config;
+
+    /**
+     * Converts from a Message into a tuple.
+     */
+    private final TupleConverter messageConverter;
+
+    /**
      * Topology context.
      */
     private transient TopologyContext topologyContext;
@@ -33,22 +40,34 @@ public class RedisStreamSpout implements ISpout {
     /**
      * Storm Output Collector reference.
      */
-    private SpoutOutputCollector collector;
-
-    /**
-     * Converts from a Message into a tuple.
-     */
-    private TupleConverter messageConverter;
+    private transient SpoutOutputCollector collector;
 
     /**
      * Thread-Safe interface for passing messages between the Redis Stream thread and Spout Thread.
      */
-    private SpoutFunnel funnel;
+    private transient SpoutFunnel funnel;
 
     /**
      * Background consumer thread.
      */
-    private Thread consumerThread = null;
+    private transient Thread consumerThread = null;
+
+    /**
+     * Constructor.
+     * @param config Configuration properties for the spout.
+     */
+    public RedisStreamSpout(final RedisStreamSpoutConfig config) {
+        this.config = Objects.requireNonNull(config);
+        this.messageConverter = config.getTupleConverter();
+    }
+
+    /**
+     * Constructor.
+     * @param builder Configuration properties for the spout.
+     */
+    public RedisStreamSpout(final RedisStreamSpoutConfig.Builder builder) {
+        this(Objects.requireNonNull(builder.build()));
+    }
 
     @Override
     public void open(
@@ -59,24 +78,18 @@ public class RedisStreamSpout implements ISpout {
         this.topologyContext = Objects.requireNonNull(topologyContext);
         this.collector = Objects.requireNonNull(spoutOutputCollector);
 
-        // Create config
-        final Configuration config = ConfigUtil.load(
-            spoutConfig, topologyContext
-        );
-
-        // Create message converter instance.
-        messageConverter = FactoryUtil.newTupleConverter(config.getTupleConverterClass());
-
         // Create funnel instance.
         this.funnel = new MemoryFunnel(config, spoutConfig);
 
         // Create consumer and client
-        final Client client = new LettuceClient(config);
+        final int taskIndex = topologyContext.getThisTaskIndex();
+        final Client client = new LettuceClient(config, taskIndex);
         final Consumer consumer = new Consumer(config, client, (ConsumerFunnel) funnel);
 
+        // Create background consuming thread.
         consumerThread = new Thread(
             consumer,
-            "RedisStreamSpout-ConsumerThread"
+            "RedisStreamSpout-ConsumerThread[" + taskIndex + "]"
         );
     }
 

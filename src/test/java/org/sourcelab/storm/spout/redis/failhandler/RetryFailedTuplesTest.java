@@ -1,10 +1,10 @@
 package org.sourcelab.storm.spout.redis.failhandler;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.sourcelab.storm.spout.redis.Message;
-import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,9 +23,10 @@ class RetryFailedTuplesTest {
      * Verify that messages are retried up to the maximum configured limit.
      * In this case we set a limit of 2 retries.
      */
-    @ParameterizedTest
-    @MethodSource("provide2Value")
-    void verify_noReplaysAfterMaxReached(final Object cfgValue) {
+    @Test
+    void verify_noReplaysAfterMaxReached() {
+        final int maxLimit = 2;
+
         // Create test message
         final String msgId = "MyMsgId1";
         final Map<String, String> body = Collections.singletonMap("MyKey", "MyValue");
@@ -33,10 +34,9 @@ class RetryFailedTuplesTest {
 
         // Configure with 2 retries
         final Map<String, Object> stormConfig = new HashMap<>();
-        stormConfig.put(ConfigUtil.FAILURE_HANDLER_MAX_RETRIES, cfgValue);
 
         // Create instance
-        final RetryFailedTuples handler = new RetryFailedTuples();
+        final RetryFailedTuples handler = new RetryFailedTuples(maxLimit);
         handler.open(stormConfig);
 
         // If we ask for the next message, it should return null
@@ -87,7 +87,7 @@ class RetryFailedTuplesTest {
      */
     @ParameterizedTest
     @MethodSource("provideNegativeValues")
-    void verify_alwaysReplay(final Object cfgValue) {
+    void verify_alwaysReplay(final Integer cfgValue) {
         // Create test message
         final String msgId = "MyMsgId1";
         final Map<String, String> body = Collections.singletonMap("MyKey", "MyValue");
@@ -95,10 +95,9 @@ class RetryFailedTuplesTest {
 
         // Configure with -1 retries (always retry)
         final Map<String, Object> stormConfig = new HashMap<>();
-        stormConfig.put(ConfigUtil.FAILURE_HANDLER_MAX_RETRIES, cfgValue);
 
         // Create instance
-        final RetryFailedTuples handler = new RetryFailedTuples();
+        final RetryFailedTuples handler = new RetryFailedTuples(cfgValue);
         handler.open(stormConfig);
 
         // If we ask for the next message, it should return null
@@ -133,9 +132,10 @@ class RetryFailedTuplesTest {
      * Verify that messages are endlessly replayed if configured
      * to a max of 0.
      */
-    @ParameterizedTest
-    @MethodSource("provideZeroValues")
-    void verify_neverReplay(final Object cfgValue) {
+    @Test
+    void verify_neverReplay() {
+        final int maxLimit = 0;
+
         // Create test message
         final String msgId = "MyMsgId1";
         final Map<String, String> body = Collections.singletonMap("MyKey", "MyValue");
@@ -143,10 +143,9 @@ class RetryFailedTuplesTest {
 
         // Configure with -1 retries (always retry)
         final Map<String, Object> stormConfig = new HashMap<>();
-        stormConfig.put(ConfigUtil.FAILURE_HANDLER_MAX_RETRIES, cfgValue);
 
         // Create instance
-        final RetryFailedTuples handler = new RetryFailedTuples();
+        final RetryFailedTuples handler = new RetryFailedTuples(maxLimit);
         handler.open(stormConfig);
 
         // If we ask for the next message, it should return null
@@ -172,30 +171,12 @@ class RetryFailedTuplesTest {
         assertNull(handler.getMessage(), "Should have no msgs");
     }
 
-    static Stream<Arguments> provideZeroValues() {
-        return Stream.of(
-            // Integer value
-            Arguments.of(0),
-            // String value
-            Arguments.of("0")
-        );
-    }
-
-    static Stream<Arguments> provide2Value() {
-        return Stream.of(
-            // Integer value
-            Arguments.of(2),
-            // String value
-            Arguments.of("2")
-        );
-    }
-
     static Stream<Arguments> provideNegativeValues() {
         return Stream.of(
             // Integer value
             Arguments.of(-1),
             // String value
-            Arguments.of("-1")
+            Arguments.of(-2)
         );
     }
 }

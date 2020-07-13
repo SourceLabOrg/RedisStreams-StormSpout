@@ -8,9 +8,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.sourcelab.storm.spout.redis.client.LettuceClient;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
-import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.sourcelab.storm.spout.redis.util.outputcollector.EmittedTuple;
 import org.sourcelab.storm.spout.redis.util.outputcollector.StubSpoutCollector;
@@ -20,7 +18,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -53,9 +51,10 @@ class RedisStreamSpoutIntegrationTest {
     private static final String FAILURE_HANDLER_CLASS = NoRetryHandler.class.getName();
     private static final String TUPLE_CONVERTER_CLASS = TestTupleConverter.class.getName();
 
+    private final Map<String, Object> stormConfig = Collections.emptyMap();
+
     private RedisTestHelper redisTestHelper;
-    private Map<String, Object> stormConfig;
-    private LettuceClient client;
+    private RedisStreamSpoutConfig.Builder configBuilder;
     private String streamKey;
 
     // Mocks
@@ -66,23 +65,19 @@ class RedisStreamSpoutIntegrationTest {
         // Generate a random stream key
         streamKey = "MyStreamKey" + System.currentTimeMillis();
 
-        // Create Config Map
-        stormConfig = new HashMap<>();
-
-        // Set Connection Properties
-        stormConfig.put(ConfigUtil.REDIS_SERVER_HOST, redis.getHost());
-        stormConfig.put(ConfigUtil.REDIS_SERVER_PORT, redis.getFirstMappedPort());
-
-        // Set Consumer Properties.
-        stormConfig.put(ConfigUtil.REDIS_CONSUMER_GROUP_NAME, GROUP_NAME);
-        stormConfig.put(ConfigUtil.REDIS_CONSUMER_STREAM_KEY, streamKey);
-        stormConfig.put(ConfigUtil.REDIS_CONSUMER_CONSUMER_ID_PREFIX, CONSUMER_ID_PREFIX);
-
-        // Failure Handler
-        stormConfig.put(ConfigUtil.FAILURE_HANDLER_CLASS, FAILURE_HANDLER_CLASS);
-
-        // Tuple Handler Class
-        stormConfig.put(ConfigUtil.TUPLE_CONVERTER_CLASS, TUPLE_CONVERTER_CLASS);
+        // Create config
+        configBuilder = RedisStreamSpoutConfig.newBuilder()
+            // Set Connection Properties
+            .withHost(redis.getHost())
+            .withPort(redis.getFirstMappedPort())
+            // Consumer Properties
+            .withGroupName(GROUP_NAME)
+            .withConsumerIdPrefix(CONSUMER_ID_PREFIX)
+            .withStreamKey(streamKey)
+            // Failure Handler
+            .withNoRetryFailureHandler()
+            // Tuple Handler Class
+            .withTupleConverter(new TestTupleConverter());
 
         // Setup mock
         mockTopologyContext = mock(TopologyContext.class);
@@ -105,7 +100,7 @@ class RedisStreamSpoutIntegrationTest {
     @Test
     void smokeTest_openAndClose() {
         // Create spout
-        final ISpout spout = new RedisStreamSpout();
+        final ISpout spout = new RedisStreamSpout(configBuilder.build());
         final StubSpoutCollector collector = new StubSpoutCollector();
 
         // Open spout
@@ -124,7 +119,7 @@ class RedisStreamSpoutIntegrationTest {
     @Test
     void smokeTest_openActivateDeactivateAndClose() throws InterruptedException {
         // Create spout
-        final ISpout spout = new RedisStreamSpout();
+        final ISpout spout = new RedisStreamSpout(configBuilder.build());
         final StubSpoutCollector collector = new StubSpoutCollector();
 
         // Open spout
@@ -153,12 +148,12 @@ class RedisStreamSpoutIntegrationTest {
      * Disabled for now.
      */
     void smokeTest_configureInvalidRedisHost() throws InterruptedException {
-        // Create spout
-        final ISpout spout = new RedisStreamSpout();
-        final StubSpoutCollector collector = new StubSpoutCollector();
-
         // Lets override the redis host with something invalid
-        stormConfig.put(ConfigUtil.REDIS_SERVER_PORT, "1234");
+        configBuilder.withPort(1234);
+
+        // Create spout
+        final ISpout spout = new RedisStreamSpout(configBuilder.build());
+        final StubSpoutCollector collector = new StubSpoutCollector();
 
         // Open spout
         spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
@@ -189,7 +184,7 @@ class RedisStreamSpoutIntegrationTest {
     @Test
     void smokeTest_consumeAndAckMessages() throws InterruptedException {
         // Create spout
-        final ISpout spout = new RedisStreamSpout();
+        final ISpout spout = new RedisStreamSpout(configBuilder.build());
         final StubSpoutCollector collector = new StubSpoutCollector();
 
         // Open spout
