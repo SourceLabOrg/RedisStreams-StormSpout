@@ -51,7 +51,7 @@ public class RedisTestHelper implements AutoCloseable {
 
         for (int index = 0; index < numberOfMessages; index++) {
             final Map<String, String> messageBody = new HashMap<>();
-            messageBody.put("key", "key" + index);
+            messageBody.put("value", "value" + index);
             messageBody.put("timestamp", String.valueOf(System.currentTimeMillis()));
 
             final String messageId = commands.xadd(

@@ -1,8 +1,10 @@
 package org.sourcelab.storm.spout.redis;
 
-import org.apache.storm.spout.ISpout;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.IRichSpout;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.tuple.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.client.Consumer;
@@ -12,14 +14,14 @@ import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /**
  * Redis Stream based Spout for Apache Storm 2.2.x.
  */
-public class RedisStreamSpout implements ISpout {
+public class RedisStreamSpout implements IRichSpout {
     private static final Logger logger = LoggerFactory.getLogger(RedisStreamSpout.class);
 
     /**
@@ -126,23 +128,15 @@ public class RedisStreamSpout implements ISpout {
         }
 
         // Build tuple from the message.
-        final List<Object> tuple = messageConverter.createTuple(nextMessage);
+        final TupleValue tuple = messageConverter.createTuple(nextMessage);
         if (tuple == null) {
             // If null returned, then we should ack the message and return
             funnel.ackMessage(nextMessage.getId());
             return;
         }
 
-        // Get output stream.
-        final String streamId = messageConverter.getStreamId(nextMessage);
-
-        // If we have a stream Id.
-        if (streamId != null) {
-            // Emit down that stream.
-            collector.emit(streamId, tuple, nextMessage.getId());
-        } else {
-            collector.emit(tuple, nextMessage.getId());
-        }
+        // Emit down that stream.
+        collector.emit(tuple.getStream(), tuple.getTuple(), nextMessage.getId());
     }
 
     @Override
@@ -175,5 +169,18 @@ public class RedisStreamSpout implements ISpout {
 
         // Fail the msgId
         funnel.failMessage((String) msgId);
+    }
+
+    @Override
+    public void declareOutputFields(final OutputFieldsDeclarer declarer) {
+        for (final String stream : config.getTupleConverter().streams()) {
+            final Fields fields = config.getTupleConverter().getFieldsFor(stream);
+            declarer.declareStream(stream, fields);
+        }
+    }
+
+    @Override
+    public Map<String, Object> getComponentConfiguration() {
+        return new HashMap<>();
     }
 }

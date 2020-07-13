@@ -11,31 +11,31 @@ import java.util.Objects;
  */
 public class Message {
     private final String id;
-    private final Map<String, String> message;
+    private final Map<String, String> body;
 
     /**
      * Constructor.
      * @param id Id/offset of the message.
-     * @param message The stream message.
+     * @param body The stream message.
      */
-    public Message(final String id, final Map<String, String> message) {
+    public Message(final String id, final Map<String, String> body) {
         this.id = Objects.requireNonNull(id);
-        this.message = Collections.unmodifiableMap(Objects.requireNonNull(message));
+        this.body = Collections.unmodifiableMap(Objects.requireNonNull(body));
     }
 
     public String getId() {
         return id;
     }
 
-    public Map<String, String> getMessage() {
-        return message;
+    public Map<String, String> getBody() {
+        return body;
     }
 
     @Override
     public String toString() {
         return "Message{"
             + "id='" + id + '\''
-            + ", message=" + message
+            + ", body=" + body
             + '}';
     }
 }

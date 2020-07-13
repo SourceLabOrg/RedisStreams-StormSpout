@@ -1,5 +1,9 @@
 package org.sourcelab.storm.spout.redis;
 
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.utils.Utils;
+
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -12,12 +16,21 @@ public interface TupleConverter {
      * @return Values/Tuple representation to be emitted by the spout.
      *         A return value of NULL means the message will be acked no tuple emitted by the spout.
      */
-    List<Object> createTuple(final Message message);
+    TupleValue createTuple(final Message message);
 
     /**
-     * Determine which stream to emit the tuple down.
-     * @param message Message pulled from Redis Stream.
-     * @return The name of a stream, or a value of NULL to emit down the default stream.
+     * Get the fields associated with a stream.  The streams passed in are
+     * returned by the {@link TupleConverter#streams() } method.
+     * @param stream the stream the fields are for
+     * @return the fields for that stream.
      */
-    String getStreamId(final Message message);
+    Fields getFieldsFor(final String stream);
+
+    /**
+     * Get the list of streams this translator will handle.
+     * @return the list of streams that this will handle.
+     */
+    default List<String> streams() {
+        return Collections.singletonList(Utils.DEFAULT_STREAM_ID);
+    }
 }

@@ -1,7 +1,6 @@
 package org.sourcelab.storm.spout.redis;
 
 import org.junit.jupiter.api.Test;
-import org.sourcelab.storm.spout.redis.Message;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,16 +29,16 @@ class MessageTest {
         assertEquals(id, message.getId());
 
         // Validate message
-        assertNotNull(message.getMessage());
-        assertEquals(3, message.getMessage().size());
-        assertTrue(message.getMessage().containsKey("Key1"));
-        assertEquals("Value1", message.getMessage().get("Key1"));
-        assertTrue(message.getMessage().containsKey("Key2"));
-        assertEquals("Value2", message.getMessage().get("Key2"));
-        assertTrue(message.getMessage().containsKey("Key3"));
-        assertEquals("Value3", message.getMessage().get("Key3"));
+        assertNotNull(message.getBody());
+        assertEquals(3, message.getBody().size());
+        assertTrue(message.getBody().containsKey("Key1"));
+        assertEquals("Value1", message.getBody().get("Key1"));
+        assertTrue(message.getBody().containsKey("Key2"));
+        assertEquals("Value2", message.getBody().get("Key2"));
+        assertTrue(message.getBody().containsKey("Key3"));
+        assertEquals("Value3", message.getBody().get("Key3"));
 
         // Validate message is not modifiable/immutable.
-        assertThrows(UnsupportedOperationException.class, () -> message.getMessage().put("NewValue", "AnotherValue"));
+        assertThrows(UnsupportedOperationException.class, () -> message.getBody().put("NewValue", "AnotherValue"));
     }
 }

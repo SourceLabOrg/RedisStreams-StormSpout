@@ -48,8 +48,6 @@ class RedisStreamSpoutIntegrationTest {
     private static final String GROUP_NAME = "MyGroupName";
     private static final String CONSUMER_ID_PREFIX = "ConsumerIdPrefix";
     private static final String CONSUMER_ID = CONSUMER_ID_PREFIX + "2";
-    private static final String FAILURE_HANDLER_CLASS = NoRetryHandler.class.getName();
-    private static final String TUPLE_CONVERTER_CLASS = TestTupleConverter.class.getName();
 
     private final Map<String, Object> stormConfig = Collections.emptyMap();
 
@@ -77,7 +75,7 @@ class RedisStreamSpoutIntegrationTest {
             // Failure Handler
             .withNoRetryFailureHandler()
             // Tuple Handler Class
-            .withTupleConverter(new TestTupleConverter());
+            .withTupleConverter(new TestTupleConverter("timestamp", "value"));
 
         // Setup mock
         mockTopologyContext = mock(TopologyContext.class);
@@ -225,9 +223,9 @@ class RedisStreamSpoutIntegrationTest {
             assertEquals(3, emittedTuple.getTuple().size(), "Should have 3 values");
 
             // Look for value
-            final String expectedKeyValue = "key" + index;
+            final String expectedValue = "value" + index;
             boolean foundValue = emittedTuple.getTuple().stream()
-                .anyMatch((entry) -> entry.equals(expectedKeyValue));
+                .anyMatch((entry) -> entry.equals(expectedValue));
             assertTrue(foundValue, "Failed to find key tuple value");
 
             final String expectedMsgIdValue = producedMsgIds.get(index);
