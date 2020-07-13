@@ -2,7 +2,7 @@ package org.sourcelab.storm.spout.redis.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.Configuration;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 
@@ -18,7 +18,7 @@ public class Consumer implements Runnable {
     /**
      * Configuration properties for the client.
      */
-    private final Configuration config;
+    private final RedisStreamSpoutConfig config;
 
     /**
      * The underlying Redis Client.
@@ -35,7 +35,7 @@ public class Consumer implements Runnable {
      * @param redisClient RedisClient instance.
      * @param funnel Funnel instance.
      */
-    public Consumer(final Configuration config, final Client redisClient, final ConsumerFunnel funnel) {
+    public Consumer(final RedisStreamSpoutConfig config, final Client redisClient, final ConsumerFunnel funnel) {
         this.config = Objects.requireNonNull(config);
         this.redisClient = Objects.requireNonNull(redisClient);
         this.funnel = Objects.requireNonNull(funnel);

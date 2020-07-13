@@ -3,13 +3,14 @@ package org.sourcelab.storm.spout.redis.failhandler;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
  * No-op implementation.
  * This FailureHandler will not replay failures at all.
  */
-public class NoRetryHandler implements FailureHandler {
+public class NoRetryHandler implements FailureHandler, Serializable {
     @Override
     public void open(final Map<String, Object> stormConfig) {
         // Noop.

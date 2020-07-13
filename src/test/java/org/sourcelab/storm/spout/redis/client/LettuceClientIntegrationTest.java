@@ -4,7 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.sourcelab.storm.spout.redis.Configuration;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
@@ -38,7 +38,7 @@ class LettuceClientIntegrationTest {
 
     private RedisTestHelper redisTestHelper;
 
-    private Configuration config;
+    private RedisStreamSpoutConfig config;
     private LettuceClient client;
     private String streamKey;
 
@@ -48,14 +48,13 @@ class LettuceClientIntegrationTest {
         streamKey = "MyStreamKey" + System.currentTimeMillis();
 
         // Create a config
-        config = createConfiguration(CONSUMER_ID_PREFIX + "01");
+        config = createConfiguration(CONSUMER_ID_PREFIX + "1");
 
         // Create client instance under test.
-        client = new LettuceClient(config);
+        client = new LettuceClient(config, 1);
 
         // Ensure that the key exists!
         redisTestHelper = new RedisTestHelper(config.getConnectString());
-        //redisTestHelper.createStreamKey(streamKey);
     }
 
     @AfterEach
@@ -137,8 +136,8 @@ class LettuceClientIntegrationTest {
     @Test
     void testConsumeMultipleConsumers() {
         // Define 2nd client, but don't connect yet
-        final Configuration config2 = createConfiguration(CONSUMER_ID_PREFIX + "02");
-        final LettuceClient client2 = new LettuceClient(config2);
+        final RedisStreamSpoutConfig config2 = createConfiguration(CONSUMER_ID_PREFIX + "2");
+        final LettuceClient client2 = new LettuceClient(config2, 2);
 
         try {
             // Connect first client
@@ -191,8 +190,8 @@ class LettuceClientIntegrationTest {
     @Test
     void testConsumeMultipleConsumers_scenario2() {
         // Define 2nd client, but don't connect yet
-        final Configuration config2 = createConfiguration(CONSUMER_ID_PREFIX + "02");
-        final LettuceClient client2 = new LettuceClient(config2);
+        final RedisStreamSpoutConfig config2 = createConfiguration(CONSUMER_ID_PREFIX + "2");
+        final LettuceClient client2 = new LettuceClient(config2, 2);
 
         try {
             // Connect first client
@@ -291,7 +290,7 @@ class LettuceClientIntegrationTest {
         expectedMessageIds = redisTestHelper.produceMessages(streamKey, MAX_CONSUMED_PER_READ);
 
         // Create new client using the same client
-        final LettuceClient client2 = new LettuceClient(config);
+        final LettuceClient client2 = new LettuceClient(config, 1);
         client2.connect();
 
         // Consume messages, should be the messages we got.
@@ -352,16 +351,16 @@ class LettuceClientIntegrationTest {
         assertEquals(masterList.size(), uniqueMessageIds.size(), "Duplicate ids found!");
     }
 
-    private Configuration createConfiguration(final String consumerId) {
-        return Configuration.newBuilder()
+    private RedisStreamSpoutConfig createConfiguration(final String consumerId) {
+        return RedisStreamSpoutConfig.newBuilder()
             .withHost(redis.getHost())
             .withPort(redis.getFirstMappedPort())
             .withGroupName("DefaultGroupName")
             .withStreamKey(streamKey)
-            .withConsumerId(consumerId)
+            .withConsumerIdPrefix(consumerId)
             .withMaxConsumePerRead(MAX_CONSUMED_PER_READ)
-            .withFailureHandlerClass(NoRetryHandler.class)
-            .withTupleConverterClass(TestTupleConverter.class)
+            .withNoRetryFailureHandler()
+            .withTupleConverter(new TestTupleConverter())
             .build();
     }
 }

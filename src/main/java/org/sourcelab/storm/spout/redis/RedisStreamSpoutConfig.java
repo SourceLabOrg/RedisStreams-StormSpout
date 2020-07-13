@@ -1,11 +1,14 @@
 package org.sourcelab.storm.spout.redis;
 
+import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
+
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Configuration properties for the spout.
  */
-public class Configuration {
+public class RedisStreamSpoutConfig implements Serializable {
     /**
      * Redis server details.
      */
@@ -24,9 +27,9 @@ public class Configuration {
     private final String groupName;
 
     /**
-     * Name for this consumer.
+     * Prefix name for this consumer. The spout's instance number gets appended to this.
      */
-    private final String consumerId;
+    private final String consumerIdPrefix;
 
     /**
      * Maximum number of messages to read per consume.
@@ -49,26 +52,26 @@ public class Configuration {
     private final long consumerDelayMillis;
 
     /**
-     * Name of the class to use for converting Stream messages into Tuples.
+     * TupleConverter instance for converting Stream messages into Tuples.
      */
-    private final String tupleConverterClass;
+    private final TupleConverter tupleConverter;
 
     /**
-     * Name of the class to use for handling failures.
+     * FailureHandler instance for handling failures.
      */
-    private final String failureHandlerClass;
+    private final FailureHandler failureHandler;
 
     /**
      * Constructor.
      * See Builder instance.
      */
-    public Configuration(
+    public RedisStreamSpoutConfig(
         // Redis Connection Properties
         final String host, final int port, final String password,
         // Consumer properties
-        final String streamKey, final String groupName, final String consumerId,
+        final String streamKey, final String groupName, final String consumerIdPrefix,
         // Classes
-        final String tupleConverterClass, final String failureHandlerClass,
+        final TupleConverter tupleConverterClass, final FailureHandler failureHandlerClass,
 
         // Other settings
         final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
@@ -80,12 +83,12 @@ public class Configuration {
 
         // Consumer Details
         this.groupName = Objects.requireNonNull(groupName);
-        this.consumerId = Objects.requireNonNull(consumerId);
+        this.consumerIdPrefix = Objects.requireNonNull(consumerIdPrefix);
         this.streamKey = Objects.requireNonNull(streamKey);
 
         // Classes
-        this.tupleConverterClass = Objects.requireNonNull(tupleConverterClass);
-        this.failureHandlerClass = Objects.requireNonNull(failureHandlerClass);
+        this.tupleConverter = Objects.requireNonNull(tupleConverterClass);
+        this.failureHandler = Objects.requireNonNull(failureHandlerClass);
 
         // Other settings
         this.maxConsumePerRead = maxConsumePerRead;
@@ -114,8 +117,8 @@ public class Configuration {
         return groupName;
     }
 
-    public String getConsumerId() {
-        return consumerId;
+    public String getConsumerIdPrefix() {
+        return consumerIdPrefix;
     }
 
     public int getMaxConsumePerRead() {
@@ -148,12 +151,12 @@ public class Configuration {
         return consumerDelayMillis;
     }
 
-    public String getTupleConverterClass() {
-        return tupleConverterClass;
+    public TupleConverter getTupleConverter() {
+        return tupleConverter;
     }
 
-    public String getFailureHandlerClass() {
-        return failureHandlerClass;
+    public FailureHandler getFailureHandler() {
+        return failureHandler;
     }
 
     /**
@@ -179,18 +182,18 @@ public class Configuration {
          * Consumer details.
          */
         private String groupName;
-        private String consumerId;
+        private String consumerIdPrefix;
         private String streamKey;
 
         /**
-         * Tuple Converter class.
+         * Tuple Converter instance.
          */
-        private String tupleConverterClass;
+        private TupleConverter tupleConverter;
 
         /**
-         * Failure Handler class.
+         * Failure Handler instance.
          */
-        private String failureHandlerClass;
+        private FailureHandler failureHandler;
 
         /**
          * Other configuration properties with sane defaults.
@@ -246,8 +249,8 @@ public class Configuration {
             return this;
         }
 
-        public Builder withConsumerId(final String consumerId) {
-            this.consumerId = consumerId;
+        public Builder withConsumerIdPrefix(final String consumerIdPrefix) {
+            this.consumerIdPrefix = consumerIdPrefix;
             return this;
         }
 
@@ -271,36 +274,33 @@ public class Configuration {
             return this;
         }
 
-        public Builder withTupleConverterClass(final String classStr) {
-            this.tupleConverterClass = classStr;
+        public Builder withTupleConverter(final TupleConverter instance) {
+            this.tupleConverter = instance;
             return this;
         }
 
-        public Builder withTupleConverterClass(final Class<? extends TupleConverter> clazz) {
-            return withTupleConverterClass(clazz.getName());
-        }
-
-        public Builder withFailureHandlerClass(final String classStr) {
-            this.failureHandlerClass = classStr;
+        public Builder withFailureHandler(final FailureHandler instance) {
+            this.failureHandler = instance;
             return this;
         }
 
-        public Builder withFailureHandlerClass(final Class<? extends FailureHandler> clazz) {
-            return withFailureHandlerClass(clazz.getName());
+        public Builder withNoRetryFailureHandler() {
+            this.failureHandler = new NoRetryHandler();
+            return this;
         }
 
         /**
          * Creates new Configuration instance.
          * @return Configuration instance.
          */
-        public Configuration build() {
-            return new Configuration(
+        public RedisStreamSpoutConfig build() {
+            return new RedisStreamSpoutConfig(
                 // Redis connection properties
                 host, port, password,
                 // Consumer Properties
-                streamKey, groupName, consumerId,
+                streamKey, groupName, consumerIdPrefix,
                 // Classes
-                tupleConverterClass, failureHandlerClass,
+                tupleConverter, failureHandler,
                 // Other settings
                 maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
             );

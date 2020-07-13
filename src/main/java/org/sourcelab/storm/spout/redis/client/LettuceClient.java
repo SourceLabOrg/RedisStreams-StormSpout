@@ -11,7 +11,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.Configuration;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
 
 import java.util.List;
@@ -27,7 +27,13 @@ public class LettuceClient implements Client {
     /**
      * Configuration properties for the client.
      */
-    private final Configuration config;
+    private final RedisStreamSpoutConfig config;
+
+    /**
+     * Generated from config.getConsumerIdPrefix() along with the spout's instance
+     * id to come to a unique consumerId to support parallelism.
+     */
+    private final String consumerId;
 
     /**
      * The underlying Redis Client.
@@ -50,10 +56,12 @@ public class LettuceClient implements Client {
     /**
      * Constructor.
      * @param config Configuration.
+     * @param instanceId Which instance number is this running under.
      */
-    public LettuceClient(final Configuration config) {
+    public LettuceClient(final RedisStreamSpoutConfig config, final int instanceId) {
         this(
             config,
+            instanceId,
             RedisClient.create(config.getConnectString())
         );
     }
@@ -61,11 +69,15 @@ public class LettuceClient implements Client {
     /**
      * Protected constructor for injecting a RedisClient instance, typically for tests.
      * @param config Configuration.
+     * @param instanceId Which instance number is this running under.
      * @param redisClient RedisClient instance.
      */
-    LettuceClient(final Configuration config, final RedisClient redisClient) {
+    LettuceClient(final RedisStreamSpoutConfig config, final int instanceId, final RedisClient redisClient) {
         this.config = Objects.requireNonNull(config);
         this.redisClient = Objects.requireNonNull(redisClient);
+
+        // Calculate consumerId
+        this.consumerId = config.getConsumerIdPrefix() + instanceId;
 
         // Create re-usable xReadArgs object.
         xreadArgs = XReadArgs.Builder.noack()
@@ -75,7 +87,7 @@ public class LettuceClient implements Client {
             .noack(false);
 
         // Create re-usable ConsumerFrom instance.
-        consumerFrom = Consumer.from(config.getGroupName(), config.getConsumerId());
+        consumerFrom = Consumer.from(config.getGroupName(), consumerId);
 
         // Create re-usable lastConsumed instance.
         lastConsumed = XReadArgs.StreamOffset.lastConsumed(config.getStreamKey());

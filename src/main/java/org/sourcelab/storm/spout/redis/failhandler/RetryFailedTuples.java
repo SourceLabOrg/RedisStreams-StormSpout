@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
-import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,14 +13,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Handler which will replay failed tuples a maximum number of times.
  *
- * It uses one configuration properties:
- *
- * {@link ConfigUtil.FAILURE_HANDLER_MAX_RETRIES} to set max number of times a message will be retried.
- * A value greater than 0 sets the upper limit on the numnber of times a message will fail before just being skipped.
+ * A value greater than 0 sets the upper limit on the number of times a message will fail before just being skipped.
  * A value equal to 0 says failed messages will NEVER be replayed.
  * A value less than 0 says ALWAYS replay failed messages until they are successful.
  */
-public class RetryFailedTuples implements FailureHandler {
+public class RetryFailedTuples implements FailureHandler, Serializable {
     private static final Logger logger = LoggerFactory.getLogger(RetryFailedTuples.class);
 
     /**
@@ -38,24 +35,19 @@ public class RetryFailedTuples implements FailureHandler {
      * How many times a failed message should be replayed.
      * A value of 0 means never give up on a message and always replay it.
      */
-    private int maxRetries = 10;
+    private final int maxRetries;
+
+    /**
+     * Constructor.
+     * @param maxRetries Maximum number of times to retry a failed tuple.
+     */
+    public RetryFailedTuples(final int maxRetries) {
+        this.maxRetries = maxRetries;
+    }
 
     @Override
     public void open(final Map<String, Object> stormConfig) {
-        maxRetries = 10;
-
-        // Attempt to parse value from config.
-        final Object value = stormConfig.getOrDefault(ConfigUtil.FAILURE_HANDLER_MAX_RETRIES, null);
-        if (value instanceof Number) {
-            maxRetries = ((Number) value).intValue();
-        } else if (value instanceof String) {
-            maxRetries = Integer.parseInt((String) value);
-        } else {
-            throw new IllegalStateException(
-                "Invalid configuration value provided for '" + ConfigUtil.FAILURE_HANDLER_MAX_RETRIES + "' "
-                + "Please enter valid number."
-            );
-        }
+        // no-op
     }
 
     @Override

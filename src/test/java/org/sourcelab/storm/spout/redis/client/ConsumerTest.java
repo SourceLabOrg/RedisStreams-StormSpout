@@ -4,7 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.sourcelab.storm.spout.redis.Configuration;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
@@ -38,14 +38,14 @@ class ConsumerTest {
     private static final String STREAM_KEY = "StreamKeyValue";
 
     // Create config
-    private final Configuration config = Configuration.newBuilder()
+    private final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
         .withHost(HOSTNAME)
         .withPort(PORT)
         .withStreamKey(STREAM_KEY)
         .withGroupName("GroupName")
-        .withConsumerId("ConsumerId")
-        .withFailureHandlerClass(NoRetryHandler.class)
-        .withTupleConverterClass(TestTupleConverter.class)
+        .withConsumerIdPrefix("ConsumerId")
+        .withNoRetryFailureHandler()
+        .withTupleConverter(new TestTupleConverter())
         // Small delay.
         .withConsumerDelayMillis(10L)
         .build();

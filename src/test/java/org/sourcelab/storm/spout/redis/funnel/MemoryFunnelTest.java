@@ -1,11 +1,9 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
 import org.junit.jupiter.api.Test;
-import org.sourcelab.storm.spout.redis.Configuration;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
-import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
-import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
 
 import java.util.Collections;
@@ -26,14 +24,14 @@ class MemoryFunnelTest {
     @Test
     void testPassingMessages() {
         // Create config
-        final Configuration config = Configuration.newBuilder()
+        final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
             .withHost("host")
             .withPort(123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
-            .withConsumerId("ConsumerId")
-            .withFailureHandlerClass(NoRetryHandler.class)
-            .withTupleConverterClass(TestTupleConverter.class)
+            .withConsumerIdPrefix("ConsumerId")
+            .withNoRetryFailureHandler()
+            .withTupleConverter(new TestTupleConverter())
             .build();
 
         // Create some messages
@@ -84,14 +82,14 @@ class MemoryFunnelTest {
     @Test
     void testPassingAcks() {
         // Create config
-        final Configuration config = Configuration.newBuilder()
+        final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
             .withHost("host")
             .withPort(123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
-            .withConsumerId("ConsumerId")
-            .withFailureHandlerClass(NoRetryHandler.class)
-            .withTupleConverterClass(TestTupleConverter.class)
+            .withConsumerIdPrefix("ConsumerId")
+            .withNoRetryFailureHandler()
+            .withTupleConverter(new TestTupleConverter())
             .build();
 
         // Create some messages
@@ -137,18 +135,17 @@ class MemoryFunnelTest {
     @Test
     void test_failureHandler() {
         // Create config
-        final Configuration config = Configuration.newBuilder()
+        final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
             .withHost("host")
             .withPort(123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
-            .withConsumerId("ConsumerId")
-            .withFailureHandlerClass(RetryFailedTuples.class)
-            .withTupleConverterClass(TestTupleConverter.class)
+            .withConsumerIdPrefix("ConsumerId")
+            .withFailureHandler(new RetryFailedTuples(2))
+            .withTupleConverter(new TestTupleConverter())
             .build();
 
         final Map<String, Object> stormConfig = new HashMap<>();
-        stormConfig.put(ConfigUtil.FAILURE_HANDLER_MAX_RETRIES, 2);
 
         // Create some messages
         // Create some messages
