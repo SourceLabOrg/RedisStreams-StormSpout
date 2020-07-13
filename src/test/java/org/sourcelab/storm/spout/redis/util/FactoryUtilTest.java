@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.TupleConverter;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
+import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

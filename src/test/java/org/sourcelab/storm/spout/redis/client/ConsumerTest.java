@@ -1,18 +1,14 @@
 package org.sourcelab.storm.spout.redis.client;
 
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.junit.rules.Timeout;
-import org.mockito.Mockito;
 import org.sourcelab.storm.spout.redis.Configuration;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
-import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
-import org.sourcelab.storm.spout.redis.util.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,14 +16,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;

@@ -6,7 +6,7 @@ import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.ConfigUtil;
-import org.sourcelab.storm.spout.redis.util.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
 
 import java.util.Collections;
 import java.util.HashMap;

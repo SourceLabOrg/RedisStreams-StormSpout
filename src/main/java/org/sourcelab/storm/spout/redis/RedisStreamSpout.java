@@ -15,6 +15,7 @@ import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;
 import org.sourcelab.storm.spout.redis.util.FactoryUtil;
 import org.sourcelab.storm.spout.redis.util.ConfigUtil;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -87,7 +88,7 @@ public class RedisStreamSpout implements ISpout {
 
     @Override
     public void activate() {
-        if (consumerThread != null) {
+        if (consumerThread.isAlive()) {
             // No-op.  It's already running, and deactivate() is a no-op for us.
             return;
         }
@@ -112,7 +113,7 @@ public class RedisStreamSpout implements ISpout {
         }
 
         // Build tuple from the message.
-        final Values tuple = messageConverter.createTuple(nextMessage);
+        final List<Object> tuple = messageConverter.createTuple(nextMessage);
         if (tuple == null) {
             // If null returned, then we should ack the message and return
             funnel.ackMessage(nextMessage.getId());

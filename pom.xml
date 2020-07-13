@@ -59,7 +59,7 @@
         <skipCheckStyle>false</skipCheckStyle>
 
         <!-- By default, exclude integration tests -->
-        <excludeTests>Integration</excludeTests>
+<!--        <excludeTests>Integration</excludeTests>-->
     </properties>
 
     <dependencies>

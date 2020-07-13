@@ -1,6 +1,6 @@
 package org.sourcelab.storm.spout.redis;
 
-import org.apache.storm.tuple.Values;
+import java.util.List;
 
 /**
  * Used to convert from a Redis Message into a tuple.
@@ -12,7 +12,7 @@ public interface TupleConverter {
      * @return Values/Tuple representation to be emitted by the spout.
      *         A return value of NULL means the message will be acked no tuple emitted by the spout.
      */
-    Values createTuple(final Message message);
+    List<Object> createTuple(final Message message);
 
     /**
      * Determine which stream to emit the tuple down.

@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -148,9 +149,13 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         shouldStop.set(true);
 
         // Wait until stopped.
-        while (!isRunning.get()) {
+        final long limit = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+        while (isRunning.get()) {
             try {
                 Thread.sleep(250L);
+                if (System.currentTimeMillis() >= limit) {
+                    throw new RuntimeException("Timed out waiting for thread to complete.");
+                }
             } catch (InterruptedException e) {
                 break;
             }

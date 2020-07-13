@@ -1,6 +1,5 @@
-package org.sourcelab.storm.spout.redis.util;
+package org.sourcelab.storm.spout.redis.util.test;
 
-import org.apache.storm.tuple.Values;
 import org.sourcelab.storm.spout.redis.TupleConverter;
 import org.sourcelab.storm.spout.redis.Message;
 
@@ -15,14 +14,14 @@ import java.util.List;
  */
 public class TestTupleConverter implements TupleConverter {
     @Override
-    public Values createTuple(final Message message) {
-        final List<String> values = new ArrayList<>();
+    public List<Object> createTuple(final Message message) {
+        final List<Object> values = new ArrayList<>();
         values.add(message.getId());
 
         // Hash Ordering is non-deterministic. So this is a terrible implementation.
         values.addAll(message.getMessage().values());
 
-        return new Values(values);
+        return values;
     }
 
     @Override
