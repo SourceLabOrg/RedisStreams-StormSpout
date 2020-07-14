@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.client;
 
+import org.apache.storm.task.TopologyContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,14 +54,15 @@ class ConsumerTest {
 
     // Mocks
     private Client mockClient;
+    private TopologyContext mockTopologyContext;
 
     // Instance under test
     private Consumer consumer;
 
-
     @BeforeEach
     void setup() {
-        funnel = new MemoryFunnel(config, new HashMap<>());
+        mockTopologyContext = mock(TopologyContext.class);
+        funnel = new MemoryFunnel(config, new HashMap<>(), mockTopologyContext);
         mockClient = mock(Client.class);
         consumer = new Consumer(config, mockClient, funnel);
 

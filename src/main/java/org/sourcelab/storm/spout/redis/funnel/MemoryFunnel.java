@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
+import org.apache.storm.task.TopologyContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.FailureHandler;
@@ -53,7 +54,11 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
      * Constructor.
      * @param config configuration proeprties.
      */
-    public MemoryFunnel(final RedisStreamSpoutConfig config, final Map<String, Object> stormConfig) {
+    public MemoryFunnel(
+        final RedisStreamSpoutConfig config,
+        final Map<String, Object> stormConfig,
+        final TopologyContext topologyContext
+    ) {
         Objects.requireNonNull(config);
 
         // This instance does NOT need to be concurrent.
@@ -65,7 +70,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
 
         // Create failure handler instance
         failureHandler = config.getFailureHandler();
-        failureHandler.open(stormConfig);
+        failureHandler.open(stormConfig, topologyContext);
     }
 
     @Override

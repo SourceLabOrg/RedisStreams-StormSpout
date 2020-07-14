@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.failhandler;
 
+import org.apache.storm.task.TopologyContext;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
 
@@ -12,7 +13,7 @@ import java.util.Map;
  */
 public class NoRetryHandler implements FailureHandler, Serializable {
     @Override
-    public void open(final Map<String, Object> stormConfig) {
+    public void open(final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
         // Noop.
     }
 

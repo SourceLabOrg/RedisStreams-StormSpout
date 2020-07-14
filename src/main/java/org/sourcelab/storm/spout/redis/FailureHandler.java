@@ -1,5 +1,7 @@
 package org.sourcelab.storm.spout.redis;
 
+import org.apache.storm.task.TopologyContext;
+
 import java.io.Serializable;
 import java.util.Map;
 
@@ -12,7 +14,7 @@ public interface FailureHandler extends Serializable {
      * Lifecycle method.  Called once the Spout has started.
      * @param stormConfig Configuration map passed from the spout.
      */
-    void open(final Map<String, Object> stormConfig);
+    void open(final Map<String, Object> stormConfig, final TopologyContext topologyContext);
 
     /**
      * Handle a failed message.

@@ -1,5 +1,9 @@
 package org.sourcelab.storm.spout.redis.failhandler;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import org.apache.storm.task.TopologyContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
@@ -16,6 +20,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 class ExponentialBackoffFailureHandlerTest {
     /**
@@ -23,6 +35,7 @@ class ExponentialBackoffFailureHandlerTest {
      */
     private static final long FIXED_TIME = 100000L;
     private Clock mockClock;
+    private TopologyContext mockTopologyContext;
 
     /**
      * Handles mocking Clock using Java 1.8's Clock interface.
@@ -31,6 +44,17 @@ class ExponentialBackoffFailureHandlerTest {
     public void setup() {
         // Set our clock to be fixed.
         mockClock = Clock.fixed(Instant.ofEpochMilli(FIXED_TIME), ZoneId.of("UTC"));
+        mockTopologyContext = mock(TopologyContext.class);
+
+        // Setup mock to return a non-null counter when called.
+        when(mockTopologyContext.registerCounter(anyString()))
+            .thenReturn(new Counter());
+    }
+
+    @AfterEach
+    public void cleanup() {
+        // Verify mock interactions
+        verifyNoMoreInteractions(mockTopologyContext);
     }
 
     /**
@@ -52,7 +76,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Calculate the 1st retry times
@@ -83,6 +107,9 @@ class ExponentialBackoffFailureHandlerTest {
         validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
         validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
         validateExpectedFailedMessage(handler, message3, 1, firstRetryTime);
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -104,7 +131,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -149,6 +176,9 @@ class ExponentialBackoffFailureHandlerTest {
         // Validate it has first two as failed
         validateExpectedFailedMessage(handler, message1, 3, thirdRetryTime);
         validateExpectedFailedMessage(handler, message2, 2, secondRetryTime);
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -173,7 +203,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -207,6 +237,9 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Validate its still pinned at configured max delay
         validateExpectedFailedMessage(handler, message1, 4, thirdRetryTime);
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -226,7 +259,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock, and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -235,6 +268,9 @@ class ExponentialBackoffFailureHandlerTest {
         for (int x = 0; x < 100; x++) {
             assertFalse(handler.fail(message1), "Should always be false because we are configured to never retry");
         }
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -256,7 +292,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -266,6 +302,9 @@ class ExponentialBackoffFailureHandlerTest {
             // See if accepted by handler
             assertTrue(handler.fail(message1), "Should always be true because we are configured to always retry");
         }
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -287,7 +326,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -329,6 +368,9 @@ class ExponentialBackoffFailureHandlerTest {
         // Validate that message1 is not accepted again.
         assertFalse(handler.fail(message1), "Should NOT be able to retry");
         assertTrue(handler.fail(message2), "Should be able to retry");
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -350,7 +392,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -380,6 +422,9 @@ class ExponentialBackoffFailureHandlerTest {
         assertNull(handler.getMessage(), "Should be null");
         assertNull(handler.getMessage(), "Should be null");
         assertNull(handler.getMessage(), "Should be null");
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -401,7 +446,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -475,6 +520,9 @@ class ExponentialBackoffFailureHandlerTest {
         handler.fail(message2);
         validateTupleIsNotBeingTracked(handler, message1);
         validateExpectedFailedMessage(handler, message2, 3, thirdRetryTime);
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -497,7 +545,7 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.open(new HashMap<>());
+        handler.open(new HashMap<>(), mockTopologyContext);
         handler.setClock(mockClock);
 
         // Define our messages
@@ -530,6 +578,9 @@ class ExponentialBackoffFailureHandlerTest {
         assertNull(handler.getMessage());
         assertNull(handler.getMessage());
         assertNull(handler.getMessage());
+
+        // Verify metric interactions
+        verifyMetricInteractions();
     }
 
     private void validateExpectedFailedMessage(
@@ -571,5 +622,16 @@ class ExponentialBackoffFailureHandlerTest {
             assertFalse(queue.contains(message), "Should not contain our message");
         }
         assertFalse(handler.getNumberOfTimesFailed().containsKey(message), "Should not have a fail count");
+    }
+
+    private void verifyMetricInteractions() {
+        verify(mockTopologyContext, times(1))
+            .registerCounter(eq("failureHandler.exceededRetryLimit"));
+        verify(mockTopologyContext, times(1))
+            .registerCounter(eq("failureHandler.retriedMessages"));
+        verify(mockTopologyContext, times(1))
+            .registerCounter(eq("failureHandler.successfulRetriedMessages"));
+        verify(mockTopologyContext, times(1))
+            .registerGauge(eq("failureHandler.queuedForRetry"), any(Gauge.class));
     }
 }

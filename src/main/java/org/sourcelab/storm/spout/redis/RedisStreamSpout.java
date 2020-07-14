@@ -81,7 +81,7 @@ public class RedisStreamSpout implements IRichSpout {
         this.collector = Objects.requireNonNull(spoutOutputCollector);
 
         // Create funnel instance.
-        this.funnel = new MemoryFunnel(config, spoutConfig);
+        this.funnel = new MemoryFunnel(config, spoutConfig, topologyContext);
 
         // Create consumer and client
         final int taskIndex = topologyContext.getThisTaskIndex();
