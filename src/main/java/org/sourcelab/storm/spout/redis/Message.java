@@ -32,6 +32,23 @@ public class Message {
     }
 
     @Override
+    public boolean equals(final Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (other == null || getClass() != other.getClass()) {
+            return false;
+        }
+        final Message message = (Message) other;
+        return getId().equals(message.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
     public String toString() {
         return "Message{"
             + "id='" + id + '\''

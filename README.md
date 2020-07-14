@@ -77,7 +77,8 @@ will handle Failed Tuples.  The following implementations are provided out of th
 | Implementation | Description |
 |----------------|-------------|
 | [NoRetryHandler](src/main/java/org/sourcelab/storm/spout/redis/failhandler/NoRetryHandler.java) |  Will never retry failed tuples. |
-| [RetryFailedTuples](src/main/java/org/sourcelab/storm/spout/redis/failhandler/RetryFailedTuples.java) | Rudimentary implementation that can be configured to replay failed tuples forever, or for a configured number of attempts. |
+| [ExponentialBackoffFailureHandler](src/main/java/org/sourcelab/storm/spout/redis/failhandler/ExponentialBackoffFailureHandler.java) | Will attempt to retry failed messages using an exponential backoff strategy. |
+| [RetryFailedTuples](src/main/java/org/sourcelab/storm/spout/redis/failhandler/RetryFailedTuples.java) | Rudimentary implementation that can be configured to replay failed tuples for a configured number of attempts. |
 
 #### Example Topology
 
