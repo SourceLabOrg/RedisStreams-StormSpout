@@ -4,8 +4,8 @@ import org.apache.storm.task.TopologyContext;
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
-import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 
 import java.util.Collections;
 import java.util.HashMap;

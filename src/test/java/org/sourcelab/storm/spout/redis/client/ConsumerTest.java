@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
-import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 
 import java.util.ArrayList;
 import java.util.Collections;
