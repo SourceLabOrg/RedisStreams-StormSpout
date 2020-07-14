@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.failhandler;
 
+import org.apache.storm.task.TopologyContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.FailureHandler;
@@ -46,7 +47,7 @@ public class RetryFailedTuples implements FailureHandler, Serializable {
     }
 
     @Override
-    public void open(final Map<String, Object> stormConfig) {
+    public void open(final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
         // no-op
     }
 

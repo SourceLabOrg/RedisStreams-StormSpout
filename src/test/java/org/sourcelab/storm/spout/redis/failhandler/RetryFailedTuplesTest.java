@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.failhandler;
 
+import org.apache.storm.task.TopologyContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -16,8 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class RetryFailedTuplesTest {
+    private final TopologyContext mockTopologyContext = mock(TopologyContext.class);
 
     /**
      * Verify that messages are retried up to the maximum configured limit.
@@ -32,12 +35,9 @@ class RetryFailedTuplesTest {
         final Map<String, String> body = Collections.singletonMap("MyKey", "MyValue");
         final Message message = new Message(msgId, body);
 
-        // Configure with 2 retries
-        final Map<String, Object> stormConfig = new HashMap<>();
-
         // Create instance
         final RetryFailedTuples handler = new RetryFailedTuples(maxLimit);
-        handler.open(stormConfig);
+        handler.open(new HashMap<>(), mockTopologyContext);
 
         // If we ask for the next message, it should return null
         assertNull(handler.getMessage(), "Should have no msgs");
@@ -93,12 +93,9 @@ class RetryFailedTuplesTest {
         final Map<String, String> body = Collections.singletonMap("MyKey", "MyValue");
         final Message message = new Message(msgId, body);
 
-        // Configure with -1 retries (always retry)
-        final Map<String, Object> stormConfig = new HashMap<>();
-
         // Create instance
         final RetryFailedTuples handler = new RetryFailedTuples(cfgValue);
-        handler.open(stormConfig);
+        handler.open(new HashMap<>(), mockTopologyContext);
 
         // If we ask for the next message, it should return null
         assertNull(handler.getMessage(), "Should have no msgs");
@@ -141,12 +138,9 @@ class RetryFailedTuplesTest {
         final Map<String, String> body = Collections.singletonMap("MyKey", "MyValue");
         final Message message = new Message(msgId, body);
 
-        // Configure with -1 retries (always retry)
-        final Map<String, Object> stormConfig = new HashMap<>();
-
         // Create instance
         final RetryFailedTuples handler = new RetryFailedTuples(maxLimit);
-        handler.open(stormConfig);
+        handler.open(new HashMap<>(), mockTopologyContext);
 
         // If we ask for the next message, it should return null
         assertNull(handler.getMessage(), "Should have no msgs");

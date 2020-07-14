@@ -33,18 +33,26 @@ public class ExponentialBackoffConfig implements Serializable {
     private final long retryDelayMaxMs;
 
     /**
+     * Enable/Disable flag for collecting metrics.
+     * Defaults to enabled.
+     */
+    private final boolean metricsEnabled;
+
+    /**
      * Constructor.  See Builder instance.
      */
     public ExponentialBackoffConfig(
         final int retryLimit,
         final long initialRetryDelayMs,
         final double retryDelayMultiplier,
-        final long retryDelayMaxMs
+        final long retryDelayMaxMs,
+        final boolean metricsEnabled
     ) {
         this.retryLimit = retryLimit;
         this.initialRetryDelayMs = initialRetryDelayMs;
         this.retryDelayMultiplier = retryDelayMultiplier;
         this.retryDelayMaxMs = retryDelayMaxMs;
+        this.metricsEnabled = metricsEnabled;
     }
 
     /**
@@ -71,6 +79,10 @@ public class ExponentialBackoffConfig implements Serializable {
         return retryDelayMaxMs;
     }
 
+    public boolean isMetricsEnabled() {
+        return metricsEnabled;
+    }
+
     @Override
     public String toString() {
         return "ExponentialBackoffConfig{"
@@ -78,6 +90,7 @@ public class ExponentialBackoffConfig implements Serializable {
             + ", initialRetryDelayMs=" + initialRetryDelayMs
             + ", retryDelayMultiplier=" + retryDelayMultiplier
             + ", retryDelayMaxMs=" + retryDelayMaxMs
+            + ", metricsEnabled=" + metricsEnabled
             + '}';
     }
 
@@ -106,6 +119,12 @@ public class ExponentialBackoffConfig implements Serializable {
          * Defaults to a max of 15 minutes.
          */
         private long retryDelayMaxMs = TimeUnit.MINUTES.toMillis(15);
+
+        /**
+         * Enable/Disable flag for collecting metrics.
+         * Defaults to enabled.
+         */
+        private boolean metricsEnabled = true;
 
         private Builder() {
         }
@@ -148,12 +167,25 @@ public class ExponentialBackoffConfig implements Serializable {
             return this;
         }
 
+        public Builder withMetricsEnabled() {
+            return withMetricsEnabled(true);
+        }
+
+        public Builder withMetricsDisabled() {
+            return withMetricsEnabled(false);
+        }
+
+        public Builder withMetricsEnabled(final boolean enabled) {
+            this.metricsEnabled = enabled;
+            return this;
+        }
+
         /**
          * Create new ExponentialBackoffConfig instance.
          * @return ExponentialBackoffConfig.
          */
         public ExponentialBackoffConfig build() {
-            return new ExponentialBackoffConfig(retryLimit, initialRetryDelayMs, retryDelayMultiplier, retryDelayMaxMs);
+            return new ExponentialBackoffConfig(retryLimit, initialRetryDelayMs, retryDelayMultiplier, retryDelayMaxMs, metricsEnabled);
         }
     }
 }

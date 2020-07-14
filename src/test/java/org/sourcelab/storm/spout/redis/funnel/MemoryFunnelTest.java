@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
+import org.apache.storm.task.TopologyContext;
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class MemoryFunnelTest {
 
@@ -45,7 +47,7 @@ class MemoryFunnelTest {
         final Message message3 = new Message(msgId3, Collections.singletonMap("Key3", "Value3"));
 
         // Create funnel
-        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>());
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mock(TopologyContext.class));
 
         // Ask for message, should be empty
         assertNull(funnel.nextMessage(), "Should have no messages");
@@ -98,7 +100,7 @@ class MemoryFunnelTest {
         final String msgId3 = "MyMsgId3";
 
         // Create funnel
-        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>());
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mock(TopologyContext.class));
 
         // Ask for acks, should be empty
         assertNull(funnel.nextAck(), "Should have no acks");
@@ -159,7 +161,7 @@ class MemoryFunnelTest {
         final Message message3 = new Message(msgId3, Collections.singletonMap("Key3", "Value3"));
 
         // Create funnel
-        final MemoryFunnel funnel = new MemoryFunnel(config, stormConfig);
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mock(TopologyContext.class));
 
         // Push msgs into funnel
         funnel.addMessage(message1);

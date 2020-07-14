@@ -1,9 +1,12 @@
 package org.sourcelab.storm.spout.redis.failhandler;
 
+import com.codahale.metrics.Counter;
+import org.apache.storm.task.TopologyContext;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
 
 import java.time.Clock;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -39,6 +42,11 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
     private transient TreeMap<Long, Queue<Message>> failedMessages;
 
     /**
+     * Handles recording metrics.
+     */
+    private transient MetricHandler metricHandler;
+
+    /**
      * Constructor.
      * @param config Defines configuration properties.
      */
@@ -55,11 +63,19 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
     }
 
     @Override
-    public void open(final Map<String, Object> stormConfig) {
+    public void open(final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
         numberOfTimesFailed = new HashMap<>();
         failedMessages = new TreeMap<>();
         if (clock == null) {
             clock = Clock.systemUTC();
+        }
+
+        // Initialize metrics.
+        if (config.isMetricsEnabled()) {
+            metricHandler = new MetricHandler(topologyContext, failedMessages);
+        } else {
+            // Setup no-op metric collection.
+            metricHandler = new MetricHandler();
         }
     }
 
@@ -74,6 +90,10 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
         final boolean result = isEligibleForRetry(message.getId());
         if (!result) {
             // Return a value of false. Spout will call ack() on the message shortly.
+            // But lets remove from our tracking set now, this allows us to differentiate between
+            // successfully retries in the ack() method vs exceeded retry limits.
+            numberOfTimesFailed.remove(message.getId());
+            metricHandler.incrExceededRetryLimitCounter();
             return false;
         }
 
@@ -109,8 +129,11 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
 
     @Override
     public void ack(final String messageId) {
-        // Stop tracking how many times this messageId has failed.
-        numberOfTimesFailed.remove(messageId);
+        // If we were tracking this messageId
+        if (numberOfTimesFailed.remove(messageId) != null) {
+            // It means it was a successful retry.
+            metricHandler.incrSuccessfulRetriedMessagesCounter();
+        }
     }
 
     @Override
@@ -143,13 +166,17 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
         // Grab next message from the queue.
         final Message message = queue.poll();
 
-        // If our queue is empty
+        // If our queue is empty after popping this message
         if (queue.isEmpty()) {
-            // Clean up.
+            // Lets cleanup and remove the queue.
             failedMessages.remove(lowestTimestampKey);
         }
 
-        // Return the message
+        // Return the message, which may be null
+        if (message != null) {
+            // If not null, that means we're replying a previously failed message.
+            metricHandler.incrRetriedMessagesCounter();
+        }
         return message;
     }
 
@@ -200,5 +227,61 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
      */
     Map<String, Integer> getNumberOfTimesFailed() {
         return Collections.unmodifiableMap(numberOfTimesFailed);
+    }
+
+    /**
+     * Helper class to handle metrics.
+     */
+    private static class MetricHandler {
+        private final Counter metricExceededRetryLimitCount;
+        private final Counter metricRetriedMessagesCount;
+        private final Counter metricSuccessfulRetriedMessagesCounter;
+
+        /**
+         * Constructor to setup a No-op.
+         * Used for when metrics are disabled.
+         */
+        public MetricHandler() {
+            metricExceededRetryLimitCount = null;
+            metricRetriedMessagesCount = null;
+            metricSuccessfulRetriedMessagesCounter = null;
+        }
+
+        /**
+         * Constructor to initialize metric collection.
+         * @param topologyContext to register metrics.
+         * @param retryQueue Our internal retry queue to collect size data.
+         */
+        public MetricHandler(final TopologyContext topologyContext, final TreeMap<Long, Queue<Message>> retryQueue) {
+            metricExceededRetryLimitCount = topologyContext.registerCounter("failureHandler.exceededRetryLimit");
+            metricRetriedMessagesCount = topologyContext.registerCounter("failureHandler.retriedMessages");
+            metricSuccessfulRetriedMessagesCounter = topologyContext.registerCounter("failureHandler.successfulRetriedMessages");
+            topologyContext.registerGauge("failureHandler.queuedForRetry", () ->
+                retryQueue.values().stream()
+                .mapToLong(Collection::size)
+                .sum()
+            );
+        }
+
+        public void incrExceededRetryLimitCounter() {
+            if (metricExceededRetryLimitCount == null) {
+                return;
+            }
+            metricExceededRetryLimitCount.inc();
+        }
+
+        public void incrRetriedMessagesCounter() {
+            if (metricRetriedMessagesCount == null) {
+                return;
+            }
+            metricRetriedMessagesCount.inc();
+        }
+
+        public void incrSuccessfulRetriedMessagesCounter() {
+            if (metricSuccessfulRetriedMessagesCounter == null) {
+                return;
+            }
+            metricSuccessfulRetriedMessagesCounter.inc();
+        }
     }
 }
