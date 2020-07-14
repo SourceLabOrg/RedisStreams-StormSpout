@@ -2,8 +2,8 @@ package org.sourcelab.storm.spout.redis.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 
 import java.util.List;

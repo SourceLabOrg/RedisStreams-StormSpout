@@ -1,8 +1,8 @@
 package org.sourcelab.storm.spout.redis.util.test;
 
 import org.apache.storm.tuple.Fields;
-import org.sourcelab.storm.spout.redis.TupleConverter;
 import org.sourcelab.storm.spout.redis.Message;
+import org.sourcelab.storm.spout.redis.TupleConverter;
 import org.sourcelab.storm.spout.redis.TupleValue;
 
 import java.util.ArrayList;

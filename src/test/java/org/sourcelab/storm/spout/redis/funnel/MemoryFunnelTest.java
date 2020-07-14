@@ -1,8 +1,8 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
 import org.junit.jupiter.api.Test;
-import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.Message;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
 

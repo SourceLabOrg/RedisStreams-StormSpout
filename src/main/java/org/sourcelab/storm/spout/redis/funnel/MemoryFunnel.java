@@ -2,9 +2,9 @@ package org.sourcelab.storm.spout.redis.funnel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 
 import java.util.HashMap;
 import java.util.Map;
