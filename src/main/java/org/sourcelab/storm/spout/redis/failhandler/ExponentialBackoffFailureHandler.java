@@ -30,13 +30,13 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
     /**
      * This map hows how many times each messageId has failed.
      */
-    private Map<String, Integer> numberOfTimesFailed;
+    private transient Map<String, Integer> numberOfTimesFailed;
 
     /**
      * This is a sorted Tree of timestamps, where each timestamp points to a queue of
      * failed messages.
      */
-    private TreeMap<Long, Queue<Message>> failedMessages;
+    private transient TreeMap<Long, Queue<Message>> failedMessages;
 
     /**
      * Constructor.
@@ -56,13 +56,9 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
 
     @Override
     public void open(final Map<String, Object> stormConfig) {
-        // Init data structures.
         numberOfTimesFailed = new HashMap<>();
         failedMessages = new TreeMap<>();
-
-        if (clock == null) {
-            clock = Clock.systemUTC();
-        }
+        clock = Clock.systemUTC();
     }
 
     @Override
@@ -72,31 +68,28 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
             return false;
         }
 
-        // Determine if we should continue to track/handle this message.
-        final boolean result = retryFurther(message.getId());
+        // If we shouldn't retry this message again
+        final boolean result = isEligibleForRetry(message.getId());
         if (!result) {
-            // If not, return false.  Spout will call ack() on the message shortly.
+            // Return a value of false. Spout will call ack() on the message shortly.
             return false;
         }
 
-        // Determine how many times this message has failed previously.
+        // Increment our failure counter for this message.
         final String messageId = message.getId();
         final int failCount = numberOfTimesFailed.compute(messageId, (key, val) -> (val == null) ? 1 : val + 1);
 
-        // Determine when we should retry this msg next
-        // Calculate how many milliseconds to wait until the next retry
+        // Determine the timestamp that this message should be replayed.
         long additionalTime = (long) (config.getInitialRetryDelayMs() * Math.pow(config.getRetryDelayMultiplier(), failCount - 1));
 
         // If its over our configured max delay, cap at the configured max delay period.
         additionalTime = Long.min(additionalTime, config.getRetryDelayMaxMs());
 
         // Calculate the timestamp for the retry.
-        final long retryTime = clock.millis() + additionalTime;
+        final long retryTimestamp = clock.millis() + additionalTime;
 
-        // If we had previous fails
+        // Clear queues of previous fails.
         if (failCount > 1) {
-            // Make sure they're removed.  This kind of sucks.
-            // This may not be needed in reality...just because of how we've setup our tests :/
             for (final Queue queue : failedMessages.values()) {
                 if (queue.remove(message)) {
                     break;
@@ -104,11 +97,8 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
             }
         }
 
-        // Grab the queue for this timestamp,
-        // If it doesn't exist, create a new queue and return it.
-        final Queue<Message> queue = failedMessages.computeIfAbsent(retryTime, k -> new LinkedList<>());
-
-        // Add our message to the queue.
+        // Get / Create the queue for this timestamp and append our message.
+        final Queue<Message> queue = failedMessages.computeIfAbsent(retryTimestamp, k -> new LinkedList<>());
         queue.add(message);
 
          // Return value of true
@@ -117,15 +107,15 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
 
     @Override
     public void ack(final String messageId) {
-        // Remove fail count tracking
+        // Stop tracking how many times this messageId has failed.
         numberOfTimesFailed.remove(messageId);
     }
 
     @Override
     public Message getMessage() {
-        // If our map is empty
+        // If we have no queues
         if (failedMessages.isEmpty()) {
-            // Then we have nothing to expire!
+            // Then nothing to return
             return null;
         }
 
@@ -133,16 +123,11 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
         final long now = clock.millis();
 
         // Grab the lowest key from the sorted map.
-        // Because of the empty check above, we're confident this will NOT return null.
         final Map.Entry<Long, Queue<Message>> entry = failedMessages.firstEntry();
-
-        // But lets be safe.
         if (entry == null) {
-            // Nothing to expire
             return null;
         }
 
-        // Populate the values
         final long lowestTimestampKey = entry.getKey();
         final Queue<Message> queue = entry.getValue();
 
@@ -153,12 +138,12 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
             return null;
         }
 
-        // Pop a message from the queue.
+        // Grab next message from the queue.
         final Message message = queue.poll();
 
-        // If our queue is now empty
+        // If our queue is empty
         if (queue.isEmpty()) {
-            // remove it
+            // Clean up.
             failedMessages.remove(lowestTimestampKey);
         }
 
@@ -166,23 +151,28 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
         return message;
     }
 
-    private boolean retryFurther(final String messageId) {
-        // If max retries is set to 0, we will never retry any tuple.
+    /**
+     * Determine if this messageId is eleigible for being retried or not.
+     * @param messageId The messageId to check.
+     * @return True if the messageId should be retried later, false if it should not.
+     */
+    private boolean isEligibleForRetry(final String messageId) {
+        // Never retry if configured with a value of 0.
         if (config.getRetryLimit() == 0) {
             return false;
         }
 
-        // If max retries is less than 0, we'll retry forever
+        // Always retry if configured with a value less than 0.
         if (config.getRetryLimit() < 0) {
             return true;
         }
 
-        // Find out how many times this tuple has failed previously.
+        // Determine if this message has failed previously.
         final int numberOfTimesHasFailed = numberOfTimesFailed.getOrDefault(messageId, 0);
 
-        // If we have exceeded our max retry limit
+        // If we have exceeded the retry limit
         if (numberOfTimesHasFailed >= config.getRetryLimit()) {
-            // Then we shouldn't retry
+            // Don't retry
             return false;
         }
         return true;
