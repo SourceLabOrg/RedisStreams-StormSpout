@@ -1,6 +1,6 @@
 # Redis Streams Spout for Apache Storm
 
-[![Build Status](https://travis-ci.org/SourceLabOrg/kRedisStreams-StormSpout.svg?branch=master)](https://travis-ci.org/SourceLabOrg/RedisStreams-StormSpout)
+[![Build Status](https://travis-ci.org/SourceLabOrg/RedisStreams-StormSpout.svg?branch=master)](https://travis-ci.org/SourceLabOrg/RedisStreams-StormSpout)
 
 This project is an [Apache Storm](https://storm.apache.org/) Spout for consuming from [Redis Streams](https://redis.io/topics/streams-intro).
 
