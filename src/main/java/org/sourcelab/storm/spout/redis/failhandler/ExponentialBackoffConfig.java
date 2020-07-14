@@ -167,12 +167,12 @@ public class ExponentialBackoffConfig implements Serializable {
             return this;
         }
 
-        public Builder withMetricsEnabled() {
-            return withMetricsEnabled(true);
-        }
-
         public Builder withMetricsDisabled() {
             return withMetricsEnabled(false);
+        }
+
+        public Builder withMetricsEnabled() {
+            return withMetricsEnabled(true);
         }
 
         public Builder withMetricsEnabled(final boolean enabled) {
