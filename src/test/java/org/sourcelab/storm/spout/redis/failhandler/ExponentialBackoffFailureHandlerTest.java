@@ -52,8 +52,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Calculate the 1st retry times
         final long firstRetryTime = FIXED_TIME + (long) (expectedMinRetryTimeMs * Math.pow(expectedDelayMultiplier, 0));
@@ -67,22 +67,22 @@ class ExponentialBackoffFailureHandlerTest {
         handler.fail(message1);
 
         // Validate it has failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
 
         // Mark second as having failed
         handler.fail(message2);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Mark 3rd as having failed
         handler.fail(message3);
 
         // Validate it has all three as failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
-        validateExpectedFailedMessageId(handler, message3, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message3, 1, firstRetryTime);
     }
 
     /**
@@ -104,8 +104,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -120,35 +120,35 @@ class ExponentialBackoffFailureHandlerTest {
         handler.fail(message1);
 
         // Validate it has failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
 
         // Mark second as having failed
         handler.fail(message2);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Now fail messageId1 a second time.
         handler.fail(message1);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 2, secondRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 2, secondRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Now fail messageId1 a 3rd time.
         handler.fail(message1);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 3, thirdRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 3, thirdRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Now fail messageId2 a 2nd time.
         handler.fail(message2);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 3, thirdRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 2, secondRetryTime);
+        validateExpectedFailedMessage(handler, message1, 3, thirdRetryTime);
+        validateExpectedFailedMessage(handler, message2, 2, secondRetryTime);
     }
 
     /**
@@ -173,8 +173,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -188,25 +188,25 @@ class ExponentialBackoffFailureHandlerTest {
         handler.fail(message1);
 
         // Validate it has failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
 
         // Now fail message1 a second time.
         handler.fail(message1);
 
         // Validate it incremented our delay time, still below configured max delay
-        validateExpectedFailedMessageId(handler, message1, 2, secondRetryTime);
+        validateExpectedFailedMessage(handler, message1, 2, secondRetryTime);
 
         // Now fail message1 a 3rd time.
         handler.fail(message1);
 
         // Validate its pinned at configured max delay
-        validateExpectedFailedMessageId(handler, message1, 3, thirdRetryTime);
+        validateExpectedFailedMessage(handler, message1, 3, thirdRetryTime);
 
         // Now fail message1 a 4th time.
         handler.fail(message1);
 
         // Validate its still pinned at configured max delay
-        validateExpectedFailedMessageId(handler, message1, 4, thirdRetryTime);
+        validateExpectedFailedMessage(handler, message1, 4, thirdRetryTime);
     }
 
     /**
@@ -224,10 +224,10 @@ class ExponentialBackoffFailureHandlerTest {
             .withInitialRetryDelayMs(expectedMinRetryTimeMs)
             .build();
 
-        // Create instance, inject our mock clock,  and call open.
+        // Create instance, inject our mock clock, and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -256,8 +256,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -287,8 +287,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -303,28 +303,28 @@ class ExponentialBackoffFailureHandlerTest {
         handler.fail(message1);
 
         // Validate it has failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
 
         // Mark second as having failed
         handler.fail(message2);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Fail message1 a 2nd time
         assertTrue(handler.fail(message1), "Should be accepted");
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 2, secondRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 2, secondRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Fail message 1 a 3rd time
         assertTrue(handler.fail(message1), "Should be accepted");
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 3, thirdRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message1, 3, thirdRetryTime);
+        validateExpectedFailedMessage(handler, message2, 1, firstRetryTime);
 
         // Validate that message1 is not accepted again.
         assertFalse(handler.fail(message1), "Should NOT be able to retry");
@@ -350,8 +350,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -362,13 +362,13 @@ class ExponentialBackoffFailureHandlerTest {
         handler.fail(message2);
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(
+        validateExpectedFailedMessage(
             handler,
             message1,
             1,
             (FIXED_TIME + (long) expectedMinRetryTimeMs)
         );
-        validateExpectedFailedMessageId(
+        validateExpectedFailedMessage(
             handler,
             message2,
             1,
@@ -401,8 +401,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -420,8 +420,8 @@ class ExponentialBackoffFailureHandlerTest {
         final long secondRetryTime = FIXED_TIME + (long) (expectedMinRetryTimeMs * Math.pow(expectedDelayMultiplier, 1));
 
         // Validate it has first two as failed
-        validateExpectedFailedMessageId(handler, message1, 1, firstRetryTime);
-        validateExpectedFailedMessageId(handler, message2, 2, secondRetryTime);
+        validateExpectedFailedMessage(handler, message1, 1, firstRetryTime);
+        validateExpectedFailedMessage(handler, message2, 2, secondRetryTime);
 
         // Ask for the next tuple to retry, should be empty
         assertNull(handler.getMessage(), "Should be null");
@@ -442,8 +442,8 @@ class ExponentialBackoffFailureHandlerTest {
         assertEquals(message1.getId(), nextMessageToBeRetried.getId(), "Should be our message1");
 
         // Validate the internal state.
-        validateTupleNotInFailedSetButIsInFlight(handler, message1);
-        validateExpectedFailedMessageId(handler, message2, 2, secondRetryTime);
+        validateTupleNotInFailedSet(handler, message1);
+        validateExpectedFailedMessage(handler, message2, 2, secondRetryTime);
 
         // Calling nextFailedMessageToRetry should result in null.
         assertNull(handler.getMessage(), "Should be null");
@@ -460,13 +460,13 @@ class ExponentialBackoffFailureHandlerTest {
         assertNotNull(nextMessageToBeRetried, "result should not be null");
 
         // Validate state.
-        validateTupleNotInFailedSetButIsInFlight(handler, message1);
-        validateTupleNotInFailedSetButIsInFlight(handler, message2);
+        validateTupleNotInFailedSet(handler, message1);
+        validateTupleNotInFailedSet(handler, message2);
 
         // call ack, validate its no longer tracked
         handler.ack(message1.getId());
         validateTupleIsNotBeingTracked(handler, message1);
-        validateTupleNotInFailedSetButIsInFlight(handler, message2);
+        validateTupleNotInFailedSet(handler, message2);
 
         // Calculate retry time for 3rd fail against new fixed time
         final long thirdRetryTime = newFixedTime + (long) (expectedMinRetryTimeMs * Math.pow(expectedDelayMultiplier, 2));
@@ -474,7 +474,7 @@ class ExponentialBackoffFailureHandlerTest {
         // Mark tuple2 as having failed
         handler.fail(message2);
         validateTupleIsNotBeingTracked(handler, message1);
-        validateExpectedFailedMessageId(handler, message2, 3, thirdRetryTime);
+        validateExpectedFailedMessage(handler, message2, 3, thirdRetryTime);
     }
 
     /**
@@ -497,8 +497,8 @@ class ExponentialBackoffFailureHandlerTest {
 
         // Create instance, inject our mock clock,  and call open.
         final ExponentialBackoffFailureHandler handler = new ExponentialBackoffFailureHandler(config);
-        handler.setClock(mockClock);
         handler.open(new HashMap<>());
+        handler.setClock(mockClock);
 
         // Define our messages
         final Message message1 = new Message("msgId1", new HashMap<>());
@@ -516,7 +516,7 @@ class ExponentialBackoffFailureHandlerTest {
         handler.setClock(Clock.fixed(Instant.ofEpochMilli(FIXED_TIME + 200), ZoneId.of("UTC")));
         handler.fail(message3);
 
-        // call 3 times, see what comes out.
+        // call getMessage() 3 times
         // We'd expect to get message1 since its the oldest, followed by message2, and then message3
         final Message result1 = handler.getMessage();
         final Message result2 = handler.getMessage();
@@ -525,9 +525,14 @@ class ExponentialBackoffFailureHandlerTest {
         assertEquals(message1.getId(), result1.getId(), "Result1 should be message1");
         assertEquals(message2.getId(), result2.getId(), "Result2 should be message1");
         assertEquals(message3.getId(), result3.getId(), "Result3 should be message1");
+
+        // Future calls should be null
+        assertNull(handler.getMessage());
+        assertNull(handler.getMessage());
+        assertNull(handler.getMessage());
     }
 
-    private void validateExpectedFailedMessageId(
+    private void validateExpectedFailedMessage(
         final ExponentialBackoffFailureHandler handler,
         final Message message,
         final int expectedFailCount,
@@ -551,7 +556,7 @@ class ExponentialBackoffFailureHandlerTest {
         );
     }
 
-    private void validateTupleNotInFailedSetButIsInFlight(final ExponentialBackoffFailureHandler handler, final Message message) {
+    private void validateTupleNotInFailedSet(final ExponentialBackoffFailureHandler handler, final Message message) {
         // Loop through all failed tuples
         for (final Long key : handler.getFailedMessages().keySet()) {
             final Queue queue = handler.getFailedMessages().get(key);

@@ -58,7 +58,9 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
     public void open(final Map<String, Object> stormConfig) {
         numberOfTimesFailed = new HashMap<>();
         failedMessages = new TreeMap<>();
-        clock = Clock.systemUTC();
+        if (clock == null) {
+            clock = Clock.systemUTC();
+        }
     }
 
     @Override
