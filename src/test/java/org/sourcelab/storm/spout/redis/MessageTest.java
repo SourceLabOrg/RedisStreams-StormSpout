@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,5 +41,36 @@ class MessageTest {
 
         // Validate message is not modifiable/immutable.
         assertThrows(UnsupportedOperationException.class, () -> message.getBody().put("NewValue", "AnotherValue"));
+    }
+
+    /**
+     * Validate assumptions on Message#equals.
+     */
+    @Test
+    void smokeTest_equals() {
+        final String id = "MyId";
+        final Map<String, String> body = new HashMap<>();
+        body.put("Key1", "Value1");
+        body.put("Key2", "Value2");
+        body.put("Key3", "Value3");
+
+        final Message message1 = new Message(id, body);
+
+        // Create a 2nd message, same Id, but different values.
+        // It's expected that we match on the Id property, so these should match.
+        final Message message2 = new Message("MyId", new HashMap<>());
+
+        // This has the same values, but different Id.
+        // It's expected that it is NOT equal to either of the other messages.
+        final Message message3 = new Message("MyId3", new HashMap<>());
+
+        // Validate equals
+        assertEquals(message1, message2, "Messages should be equal");
+        assertEquals(message1, message1, "Messages should be equal");
+        assertEquals(message2, message2, "Messages should be equal");
+
+        // Validate not equals
+        assertNotEquals(message1, message3, "Messages should be equal");
+        assertNotEquals(message2, message3, "Messages should be equal");
     }
 }
