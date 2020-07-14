@@ -44,7 +44,7 @@ public class RedisTestHelper implements AutoCloseable {
         );
     }
 
-    public List<String> produceMessages(final String key, final int numberOfMessages) {
+    public List<String> produceMessages(final String stream, final int numberOfMessages) {
         final List<String> messageIds = new ArrayList<>();
 
         final RedisCommands<String, String> commands = connection.sync();
@@ -55,7 +55,7 @@ public class RedisTestHelper implements AutoCloseable {
             messageBody.put("timestamp", String.valueOf(System.currentTimeMillis()));
 
             final String messageId = commands.xadd(
-                key,
+                stream,
                 messageBody
             );
             messageIds.add(messageId);
@@ -65,16 +65,37 @@ public class RedisTestHelper implements AutoCloseable {
     }
 
     /**
+     * Produce a single message.
+     * @param stream Stream key
+     * @param values Values to produce.
+     * @return messageId produced.
+     */
+    public String produceMessage(final String stream, final Map<String, String> values) {
+        final RedisCommands<String, String> commands = connection.sync();
+
+        return commands.xadd(
+            stream,
+            values
+        );
+    }
+
+    /**
      * Given a stream key, groupName, and consumerId, get details about that consumer.
      * @param streamKey Stream name.
      * @param groupName Group name.
      * @param consumerId Consumer name.
      * @return StreamConsumerInfo representing information about that consumer.
      */
-    public StreamConsumerInfo getStreamInfo(final String streamKey, final String groupName, final String consumerId) {
+    public StreamConsumerInfo getConsumerInfo(final String streamKey, final String groupName, final String consumerId) {
         return getStreamInfo(streamKey, groupName).get(consumerId);
     }
 
+    /**
+     * Given a stream key and group name, get all the consumer details associated.
+     * @param streamKey Stream name.
+     * @param groupName Group name.
+     * @return Map of ConsumerId => Details about that consumer.
+     */
     public Map<String, StreamConsumerInfo> getStreamInfo(final String streamKey, final String groupName) {
         final RedisCommands<String, String> commands = connection.sync();
         final List<Object> result = commands.xinfoConsumers(streamKey, groupName);

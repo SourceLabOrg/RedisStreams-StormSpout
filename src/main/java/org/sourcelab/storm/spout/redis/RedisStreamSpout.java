@@ -179,6 +179,9 @@ public class RedisStreamSpout implements IRichSpout {
         }
     }
 
+    /**
+     * Not used.
+     */
     @Override
     public Map<String, Object> getComponentConfiguration() {
         return new HashMap<>();

@@ -1,12 +1,13 @@
 package org.sourcelab.storm.spout.redis;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
  * For handling failed tuples.
  * Does NOT need to be thread safe as only accessed via a single thread.
  */
-public interface FailureHandler {
+public interface FailureHandler extends Serializable {
     void open(Map<String, Object> stormConfig);
 
     /**

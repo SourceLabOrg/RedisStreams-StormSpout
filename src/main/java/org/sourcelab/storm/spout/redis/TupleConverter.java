@@ -3,13 +3,14 @@ package org.sourcelab.storm.spout.redis;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.utils.Utils;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
 /**
  * Used to convert from a Redis Message into a tuple.
  */
-public interface TupleConverter {
+public interface TupleConverter extends Serializable {
     /**
      * Create a Tuple from the Message pulled from Redis Stream.
      * @param message Message pulled from Redis Stream.

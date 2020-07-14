@@ -45,7 +45,7 @@ public class TestTupleConverter implements TupleConverter {
     @Override
     public Fields getFieldsFor(final String stream) {
         // Copy defined field names
-        final List<String> fields = Arrays.asList(fieldNames);
+        final List<String> fields = new ArrayList<>(Arrays.asList(fieldNames));
 
         // Prepend "msgId" field.
         fields.add(0, "msgId");
