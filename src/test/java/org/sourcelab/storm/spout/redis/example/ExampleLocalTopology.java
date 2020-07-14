@@ -8,7 +8,6 @@ import org.sourcelab.storm.spout.redis.RedisStreamSpout;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
-import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
 import org.testcontainers.containers.GenericContainer;
 
 import java.io.BufferedReader;

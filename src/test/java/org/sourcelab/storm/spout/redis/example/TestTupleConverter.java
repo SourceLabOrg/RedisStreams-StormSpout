@@ -1,4 +1,4 @@
-package org.sourcelab.storm.spout.redis.util.test;
+package org.sourcelab.storm.spout.redis.example;
 
 import org.apache.storm.tuple.Fields;
 import org.sourcelab.storm.spout.redis.Message;

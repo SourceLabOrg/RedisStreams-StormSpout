@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
-import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;

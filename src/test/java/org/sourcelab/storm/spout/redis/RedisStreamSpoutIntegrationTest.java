@@ -17,7 +17,7 @@ import org.sourcelab.storm.spout.redis.util.outputcollector.EmittedTuple;
 import org.sourcelab.storm.spout.redis.util.outputcollector.StubSpoutCollector;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.sourcelab.storm.spout.redis.util.test.StreamConsumerInfo;
-import org.sourcelab.storm.spout.redis.util.test.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
