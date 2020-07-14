@@ -79,6 +79,11 @@ will handle Failed Tuples.  The following implementations are provided out of th
 | [NoRetryHandler](src/main/java/org/sourcelab/storm/spout/redis/failhandler/NoRetryHandler.java) |  Will never retry failed tuples. |
 | [RetryFailedTuples](src/main/java/org/sourcelab/storm/spout/redis/failhandler/RetryFailedTuples.java) | Rudimentary implementation that can be configured to replay failed tuples forever, or for a configured number of attempts. |
 
+#### Example Topology
+
+[ExampleLocalTopology](src/test/java/org/sourcelab/storm/spout/redis/example/ExampleLocalTopology.java) is provided as a working
+example running on a Local Storm Topology.
+
 # Contributing
 ## Releasing
 Steps for performing a release:
