@@ -62,6 +62,12 @@ public class RedisStreamSpoutConfig implements Serializable {
     private final FailureHandler failureHandler;
 
     /**
+     * Metric collection enable/disable flag.
+     * Defaults to enabled.
+     */
+    private final boolean metricsEnabled;
+
+    /**
      * Constructor.
      * See Builder instance.
      */
@@ -74,7 +80,8 @@ public class RedisStreamSpoutConfig implements Serializable {
         final TupleConverter tupleConverterClass, final FailureHandler failureHandlerClass,
 
         // Other settings
-        final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis
+        final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis,
+        final boolean metricsEnabled
     ) {
         // Connection Details.
         this.host = Objects.requireNonNull(host);
@@ -95,6 +102,7 @@ public class RedisStreamSpoutConfig implements Serializable {
         this.maxTupleQueueSize = maxTupleQueueSize;
         this.maxAckQueueSize = maxAckQueueSize;
         this.consumerDelayMillis = consumerDelayMillis;
+        this.metricsEnabled = metricsEnabled;
     }
 
     public String getHost() {
@@ -159,6 +167,10 @@ public class RedisStreamSpoutConfig implements Serializable {
         return failureHandler;
     }
 
+    public boolean isMetricsEnabled() {
+        return metricsEnabled;
+    }
+
     /**
      * Create a new Builder instance.
      * @return Builder for Configuration instance.
@@ -202,6 +214,7 @@ public class RedisStreamSpoutConfig implements Serializable {
         private int maxTupleQueueSize = 1024;
         private int maxAckQueueSize = 1024;
         private long consumerDelayMillis = 1000L;
+        private boolean metricsEnabled = true;
 
         private Builder() {
         }
@@ -289,6 +302,19 @@ public class RedisStreamSpoutConfig implements Serializable {
             return this;
         }
 
+        public Builder withMetricsDisabled() {
+            return withMetricsEnabled(false);
+        }
+
+        public Builder withMetricsEnabled() {
+            return withMetricsEnabled(true);
+        }
+
+        public Builder withMetricsEnabled(final boolean enabled) {
+            this.metricsEnabled = enabled;
+            return this;
+        }
+
         /**
          * Creates new Configuration instance.
          * @return Configuration instance.
@@ -302,7 +328,8 @@ public class RedisStreamSpoutConfig implements Serializable {
                 // Classes
                 tupleConverter, failureHandler,
                 // Other settings
-                maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis
+                maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis,
+                metricsEnabled
             );
         }
     }

@@ -7,9 +7,9 @@ import org.sourcelab.storm.spout.redis.FailureHandler;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,7 +23,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
 
     /**
      * Tracks Tuples in Flight.
-     * Does NOT need to be concurrent because only modified via Spout side.
+     * Needs to be concurrent because of metrics collection.
      */
     private final Map<String, Message> inFlightTuples;
 
@@ -61,16 +61,21 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     ) {
         Objects.requireNonNull(config);
 
-        // This instance does NOT need to be concurrent.
-        inFlightTuples = new HashMap<>(config.getMaxTupleQueueSize());
-
         // These DO need to be concurrent.
+        inFlightTuples = new ConcurrentHashMap<>(config.getMaxTupleQueueSize());
         tupleQueue = new LinkedBlockingQueue<>(config.getMaxTupleQueueSize());
         ackQueue = new LinkedBlockingQueue<>(config.getMaxAckQueueSize());
 
         // Create failure handler instance
         failureHandler = config.getFailureHandler();
         failureHandler.open(stormConfig, topologyContext);
+
+        // Initialize Metrics
+        if (config.isMetricsEnabled()) {
+            topologyContext.registerGauge("tupleQueueSize", tupleQueue::size);
+            topologyContext.registerGauge("ackQueueSize", ackQueue::size);
+            topologyContext.registerGauge("inFlightTuples", inFlightTuples::size);
+        }
     }
 
     @Override
