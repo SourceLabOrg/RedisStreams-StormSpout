@@ -34,8 +34,8 @@ The spout is configured using the [RedisStreamSpoutConfig](src/main/java/org/sou
 | `Port`   | Required | The port to connect to Redis at. |
 | `Password` | optional | Password to connect to Redis using. |
 | `Group Name` | Required | The Consumer group name the Spout should use. |
-| `Consumer Id Prefix` | Required | A prefix to use for generating unique Consumer Ids within the Consumer Group |
-| `Stream Key` | Required | The Redis key to consume from. |
+| `Consumer Id Prefix` | Required | A prefix to use for generating unique Consumer Ids within the Consumer Group.  To support multiple parallel consumers, the Spout instance will be appended to the end of this value. |
+| `Stream Key` | Required | The Redis key to consume messages from. |
 | `Tuple Converter` | Required | Defines how messages are transformed between being consumed from Redis, and being emitted into the topology |
 | `Failure Handler` | Required | Defines how the spout handles failed tuples.  See note below. |
 

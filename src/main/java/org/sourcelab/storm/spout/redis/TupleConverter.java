@@ -20,8 +20,8 @@ public interface TupleConverter extends Serializable {
     TupleValue createTuple(final Message message);
 
     /**
-     * Get the fields associated with a stream.  The streams passed in are
-     * returned by the {@link TupleConverter#streams() } method.
+     * Get the fields associated with a stream.  The streams passed in those
+     * defined by the {@link TupleConverter#streams() } method.
      * @param stream the stream the fields are for
      * @return the fields for that stream.
      */
