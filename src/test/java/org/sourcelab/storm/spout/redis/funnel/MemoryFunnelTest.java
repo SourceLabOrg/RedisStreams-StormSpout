@@ -1,6 +1,8 @@
 package org.sourcelab.storm.spout.redis.funnel;
 
 import org.apache.storm.task.TopologyContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
@@ -9,16 +11,34 @@ import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 class MemoryFunnelTest {
+
+    private TopologyContext mockTopologyContext;
+
+    @BeforeEach
+    public void setup() {
+        mockTopologyContext = mock(TopologyContext.class);
+    }
+
+    @AfterEach
+    public void cleanup() {
+        // Verify all interactions accounted for.
+        verifyNoMoreInteractions(mockTopologyContext);
+    }
 
     /**
      * Smoke test passing messages through the funnel.
@@ -47,7 +67,7 @@ class MemoryFunnelTest {
         final Message message3 = new Message(msgId3, Collections.singletonMap("Key3", "Value3"));
 
         // Create funnel
-        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mock(TopologyContext.class));
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mockTopologyContext);
 
         // Ask for message, should be empty
         assertNull(funnel.nextMessage(), "Should have no messages");
@@ -76,6 +96,9 @@ class MemoryFunnelTest {
         assertNull(funnel.nextMessage(), "Should have no messages");
         assertNull(funnel.nextMessage(), "Should have no messages");
         assertNull(funnel.nextMessage(), "Should have no messages");
+
+        // Verify standard metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -100,7 +123,7 @@ class MemoryFunnelTest {
         final String msgId3 = "MyMsgId3";
 
         // Create funnel
-        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mock(TopologyContext.class));
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mockTopologyContext);
 
         // Ask for acks, should be empty
         assertNull(funnel.nextAck(), "Should have no acks");
@@ -129,6 +152,9 @@ class MemoryFunnelTest {
         assertNull(funnel.nextAck(), "Should have no acks");
         assertNull(funnel.nextAck(), "Should have no acks");
         assertNull(funnel.nextAck(), "Should have no acks");
+
+        // Verify standard metric interactions
+        verifyMetricInteractions();
     }
 
     /**
@@ -147,9 +173,6 @@ class MemoryFunnelTest {
             .withTupleConverter(new TestTupleConverter())
             .build();
 
-        final Map<String, Object> stormConfig = new HashMap<>();
-
-        // Create some messages
         // Create some messages
         final String msgId1 = "MyMsgId1";
         final Message message1 = new Message(msgId1, Collections.singletonMap("Key1", "Value1"));
@@ -161,7 +184,7 @@ class MemoryFunnelTest {
         final Message message3 = new Message(msgId3, Collections.singletonMap("Key3", "Value3"));
 
         // Create funnel
-        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mock(TopologyContext.class));
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mockTopologyContext);
 
         // Push msgs into funnel
         funnel.addMessage(message1);
@@ -225,6 +248,42 @@ class MemoryFunnelTest {
         // And no more
         assertNull(funnel.nextAck());
         assertNull(funnel.nextAck());
+
+        // Verify standard metric interactions
+        verifyMetricInteractions();
     }
 
+    /**
+     * Verify that if the config disables metrics,
+     * the funnel does not register any metrics.
+     */
+    @Test
+    void test_disablingMetricsDoesNotRegisterMetrics() {
+        // Create config
+        final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
+            .withHost("host")
+            .withPort(123)
+            .withGroupName("GroupName")
+            .withStreamKey("Key")
+            .withConsumerIdPrefix("ConsumerId")
+            .withFailureHandler(new RetryFailedTuples(2))
+            .withTupleConverter(new TestTupleConverter())
+            .withMetricsDisabled()
+            .build();
+
+        // Create funnel
+        final MemoryFunnel funnel = new MemoryFunnel(config, new HashMap<>(), mockTopologyContext);
+
+        // Verify we never registered metrics
+        verifyNoInteractions(mockTopologyContext);
+    }
+
+    private void verifyMetricInteractions() {
+        verify(mockTopologyContext, times(1))
+            .registerGauge(eq("tupleQueueSize"), any());
+        verify(mockTopologyContext, times(1))
+            .registerGauge(eq("ackQueueSize"), any());
+        verify(mockTopologyContext, times(1))
+            .registerGauge(eq("inFlightTuples"), any());
+    }
 }
