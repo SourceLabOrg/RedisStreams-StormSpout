@@ -10,8 +10,9 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.utils.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.outputcollector.EmittedTuple;
@@ -20,7 +21,6 @@ import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.sourcelab.storm.spout.redis.util.test.StreamConsumerInfo;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,16 +41,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Integration Test over Spout.
+ *
  */
-@Testcontainers
-@Tag("Integration")
-class RedisStreamSpoutIntegrationTest {
-    /**
-     * This test depends on the following Redis Container.
-     */
-    @Container
-    public RedisTestContainer testContainer = RedisTestContainer.newRedisContainer();
+abstract class AbstractRedisStreamSpoutIntegrationTest {
+
+    abstract RedisTestContainer getTestContainer();
 
     // Configuration values
     private static final String GROUP_NAME = "MyGroupName";
@@ -83,7 +78,7 @@ class RedisStreamSpoutIntegrationTest {
             .withTupleConverter(new TestTupleConverter("timestamp", "value"));
 
         // Set Connection Properties
-        testContainer.addConnectionDetailsToConfig(configBuilder);
+        getTestContainer().addConnectionDetailsToConfig(configBuilder);
 
         // Setup mock
         mockTopologyContext = mock(TopologyContext.class);
@@ -91,7 +86,7 @@ class RedisStreamSpoutIntegrationTest {
             .thenReturn(2);
 
         // Create test helper
-        redisTestHelper = testContainer.getRedisTestHelper();
+        redisTestHelper = getTestContainer().getRedisTestHelper();
     }
 
     @AfterEach
@@ -160,7 +155,7 @@ class RedisStreamSpoutIntegrationTest {
     void smokeTest_configureInvalidRedisHost() throws InterruptedException {
         // Lets override the redis host with something invalid
         configBuilder
-            .withServer(testContainer.getHost(), 124);
+            .withServer(getTestContainer().getHost(), 124);
 
         // Create spout
         final ISpout spout = new RedisStreamSpout(configBuilder.build());

@@ -39,8 +39,7 @@ class ConsumerTest {
 
     // Create config
     private final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
-        .withHost(HOSTNAME)
-        .withPort(PORT)
+        .withServer(HOSTNAME, PORT)
         .withStreamKey(STREAM_KEY)
         .withGroupName("GroupName")
         .withConsumerIdPrefix("ConsumerId")

@@ -19,7 +19,6 @@ import java.util.Objects;
  * Test Helper for interacting with a live Redis server.
  */
 public class RedisTestHelper implements AutoCloseable {
-    public static final String REDIS_DOCKER_CONTAINER_IMAGE = "redis:6.0.5-alpine";
     private final LettuceAdapter redisClient;
 
     @Deprecated

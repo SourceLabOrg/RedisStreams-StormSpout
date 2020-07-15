@@ -2,21 +2,13 @@ package org.sourcelab.storm.spout.redis.client;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
-import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.FixedHostPortGenericContainer;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.startupcheck.MinimumDurationRunningStartupCheckStrategy;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -27,33 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Testcontainers
-@Tag("Integration")
-class LettuceClientIntegrationTest {
-
-    /**
-     * This test depends ont he following Redis Container.
-     */
-    @Container
-//    public GenericContainer redis = new GenericContainer<>(RedisTestHelper.REDIS_DOCKER_CONTAINER_IMAGE)
-//        .withExposedPorts(6379);
-
-    //public GenericContainer redis = new GenericContainer<>("grokzen/redis-cluster:latest")
-    public GenericContainer redis = new FixedHostPortGenericContainer("grokzen/redis-cluster:latest")
-        //.withEnv("IP", DockerClientFactory.instance().dockerHostIpAddress())
-        //.withEnv("IP", "0.0.0.0")
-        .withFixedExposedPort(7000, 7000)
-        .withFixedExposedPort(7001, 7001)
-        .withFixedExposedPort(7002, 7002)
-        .withFixedExposedPort(7003, 7003)
-        .withFixedExposedPort(7004, 7004)
-        .withFixedExposedPort(7005, 7005)
-        .withEnv("IP", "127.0.0.1")
-        .withStartupCheckStrategy(
-            new MinimumDurationRunningStartupCheckStrategy(Duration.ofSeconds(10))
-        );
-
-
+/**
+ * Abstract Integration test over LettuceClient.
+ * Used as a base to test the client against both a single Redis instance, and against
+ * a RedisCluster instance.
+ */
+abstract class AbstractLettuceClientIntegrationTest {
     private static final String CONSUMER_ID_PREFIX = "ConsumerId";
     private static final int MAX_CONSUMED_PER_READ = 10;
 
@@ -62,6 +33,8 @@ class LettuceClientIntegrationTest {
     private RedisStreamSpoutConfig config;
     private LettuceClient client;
     private String streamKey;
+
+    abstract RedisTestContainer getTestContainer();
 
     @BeforeEach
     void setUp(){
@@ -74,8 +47,8 @@ class LettuceClientIntegrationTest {
         // Create client instance under test.
         client = new LettuceClient(config, 1);
 
-        // Ensure that the key exists!
-        redisTestHelper = RedisTestHelper.createClusterHelper(config.getConnectString());
+        // Create test helper instance.
+        redisTestHelper = getTestContainer().getRedisTestHelper();
     }
 
     @AfterEach
@@ -373,17 +346,16 @@ class LettuceClientIntegrationTest {
     }
 
     private RedisStreamSpoutConfig createConfiguration(final String consumerId) {
-        return RedisStreamSpoutConfig.newBuilder()
-//            .withHost(redis.getHost())
-//            .withPort(redis.getFirstMappedPort())
-            .withHost(redis.getHost())
-            .withPort(7000)
+        final RedisStreamSpoutConfig.Builder builder = RedisStreamSpoutConfig.newBuilder()
             .withGroupName("DefaultGroupName")
             .withStreamKey(streamKey)
             .withConsumerIdPrefix(consumerId)
             .withMaxConsumePerRead(MAX_CONSUMED_PER_READ)
             .withNoRetryFailureHandler()
-            .withTupleConverter(new TestTupleConverter())
+            .withTupleConverter(new TestTupleConverter());
+
+        return getTestContainer()
+            .addConnectionDetailsToConfig(builder)
             .build();
     }
 }

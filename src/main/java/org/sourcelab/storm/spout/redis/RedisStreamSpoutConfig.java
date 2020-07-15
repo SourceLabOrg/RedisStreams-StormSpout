@@ -3,7 +3,12 @@ package org.sourcelab.storm.spout.redis;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Configuration properties for the spout.
@@ -12,9 +17,8 @@ public class RedisStreamSpoutConfig implements Serializable {
     /**
      * Redis server details.
      */
-    private final String host;
-    private final int port;
-    private final String password;
+    private final RedisServer redisServer;
+    private final RedisCluster redisCluster;
 
     /**
      * The Redis key to stream from.
@@ -69,11 +73,12 @@ public class RedisStreamSpoutConfig implements Serializable {
 
     /**
      * Constructor.
-     * See Builder instance.
+     * Use Builder instance.
      */
-    public RedisStreamSpoutConfig(
+    private RedisStreamSpoutConfig(
         // Redis Connection Properties
-        final String host, final int port, final String password,
+        final RedisServer redisServer,
+        final RedisCluster redisCluster,
         // Consumer properties
         final String streamKey, final String groupName, final String consumerIdPrefix,
         // Classes
@@ -83,10 +88,15 @@ public class RedisStreamSpoutConfig implements Serializable {
         final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis,
         final boolean metricsEnabled
     ) {
-        // Connection Details.
-        this.host = Objects.requireNonNull(host);
-        this.port = port;
-        this.password = password;
+        // Connection
+        if (redisCluster != null && redisServer != null) {
+            throw new IllegalStateException("TODO");
+        } else if (redisCluster == null && redisServer == null) {
+            throw new IllegalStateException("TODO");
+        }
+
+        this.redisCluster = redisCluster;
+        this.redisServer = redisServer;
 
         // Consumer Details
         this.groupName = Objects.requireNonNull(groupName);
@@ -105,18 +115,6 @@ public class RedisStreamSpoutConfig implements Serializable {
         this.metricsEnabled = metricsEnabled;
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
     public String getStreamKey() {
         return streamKey;
     }
@@ -133,18 +131,19 @@ public class RedisStreamSpoutConfig implements Serializable {
         return maxConsumePerRead;
     }
 
+    public boolean isConnectingToCluster() {
+        return redisCluster != null;
+    }
+
     /**
      * Build a Redis connection string based on configured properties.
      * @return Redis Connection string.
      */
     public String getConnectString() {
-        String connectStr = "redis://";
-        if (getPassword() != null && !getPassword().trim().isEmpty()) {
-            connectStr += getPassword() + "@";
+        if (!isConnectingToCluster()) {
+            return redisServer.getConnectString();
         }
-        connectStr += getHost() + ":" + getPort();
-
-        return connectStr;
+        return redisCluster.getConnectString();
     }
 
     public int getMaxTupleQueueSize() {
@@ -186,9 +185,8 @@ public class RedisStreamSpoutConfig implements Serializable {
         /**
          * Connection details.
          */
-        private String host;
-        private int port;
-        private String password;
+        private final List<RedisServer> clusterServers = new ArrayList<>();
+        private RedisServer redisServer = null;
 
         /**
          * Consumer details.
@@ -219,36 +217,52 @@ public class RedisStreamSpoutConfig implements Serializable {
         private Builder() {
         }
 
-        public Builder withHost(final String host) {
-            this.host = host;
-            return this;
-        }
-
-        /**
-         * Set the port parameter.  Attempts to handle input in both
-         * Number or String input.
-         *
-         * @param port Port value.
-         * @return Builder instance.
-         * @throws IllegalArgumentException if passed a non-number representation value.
-         */
-        public Builder withPort(final Object port) {
-            Objects.requireNonNull(port);
-            if (port instanceof Number) {
-                return withPort(((Number) port).intValue());
-            } else if (port instanceof String) {
-                return withPort(Integer.parseInt((String) port));
+        public Builder withServer(final RedisServer redisServer) {
+            if (!clusterServers.isEmpty()) {
+                // Cannot define both cluster servers and redis server instances.
+                throw new IllegalArgumentException("TODO");
             }
-            throw new IllegalArgumentException("Port must be a Number!");
-        }
-
-        public Builder withPort(final int port) {
-            this.port = port;
+            this.redisServer = Objects.requireNonNull(redisServer);
             return this;
         }
 
-        public Builder withPassword(final String password) {
-            this.password = password;
+        public Builder withServer(final String host, final int port, final String password) {
+            return withServer(new RedisServer(host, port, password));
+        }
+
+        public Builder withServer(final String host, final int port) {
+            return withServer(host, port, null);
+        }
+
+
+        public Builder withClusters(final RedisServer...clusterServers) {
+            Arrays.stream(clusterServers)
+                .forEach(this::withCluster);
+            return this;
+        }
+
+        public Builder withCluster(final RedisServer clusterServer) {
+            if (redisServer != null) {
+                // Cannot define both cluster servers and redis server instances.
+                throw new IllegalArgumentException("TODO");
+            }
+            clusterServers.add(Objects.requireNonNull(clusterServer));
+            return this;
+        }
+
+        public Builder withCluster(final String host, final int port, final String password) {
+            return withCluster(new RedisServer(host, port, password));
+        }
+
+        public Builder withCluster(final String host, final int port) {
+            return withCluster(host, port, null);
+        }
+
+        public Builder withCluster(final RedisCluster redisCluster) {
+            Objects.requireNonNull(redisCluster);
+
+            this.clusterServers.clear();
+            this.clusterServers.addAll(redisCluster.getServers());
             return this;
         }
 
@@ -320,9 +334,15 @@ public class RedisStreamSpoutConfig implements Serializable {
          * @return Configuration instance.
          */
         public RedisStreamSpoutConfig build() {
+            RedisCluster redisCluster = null;
+            if (!clusterServers.isEmpty()) {
+                redisCluster = new RedisCluster(clusterServers);
+            }
+
             return new RedisStreamSpoutConfig(
                 // Redis connection properties
-                host, port, password,
+                redisServer, redisCluster,
+
                 // Consumer Properties
                 streamKey, groupName, consumerIdPrefix,
                 // Classes
@@ -331,6 +351,87 @@ public class RedisStreamSpoutConfig implements Serializable {
                 maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis,
                 metricsEnabled
             );
+        }
+    }
+
+    public static class RedisCluster {
+        private final List<RedisServer> servers;
+
+        public RedisCluster(final RedisServer...servers) {
+            this(Arrays.asList(servers));
+        }
+
+        public RedisCluster(final List<RedisServer> servers) {
+            Objects.requireNonNull(servers);
+            this.servers = Collections.unmodifiableList(new ArrayList<>(servers));
+        }
+
+        public List<RedisServer> getServers() {
+            return servers;
+        }
+
+        @Override
+        public String toString() {
+            return "RedisCluster{"
+                + "servers=" + servers
+                + '}';
+        }
+
+        public String getConnectString() {
+            return getServers().stream()
+                .map(RedisServer::getConnectString)
+                .collect(Collectors.joining(","));
+        }
+    }
+
+    public static class RedisServer {
+        private final String host;
+        private final int port;
+        private final String password;
+
+        public RedisServer(final String host, final int port) {
+            this(host, port, null);
+        }
+
+        public RedisServer(final String host, final int port, final String password) {
+            this.host = host;
+            this.port = port;
+            this.password = password;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public boolean hasPassword() {
+            return password != null;
+        }
+
+        public String getConnectString() {
+            String connectStr = "redis://";
+
+            if (getPassword() != null && !getPassword().trim().isEmpty()) {
+                connectStr += getPassword() + "@";
+            }
+            connectStr += getHost() + ":" + getPort();
+
+            return connectStr;
+        }
+
+        @Override
+        public String toString() {
+            return "RedisServer{"
+                + "host='" + host + '\''
+                + ", port=" + port
+                + '}';
         }
     }
 }

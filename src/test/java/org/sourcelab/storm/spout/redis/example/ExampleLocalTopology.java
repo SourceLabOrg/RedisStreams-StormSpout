@@ -9,6 +9,7 @@ import org.sourcelab.storm.spout.redis.RedisStreamSpout;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffConfig;
 import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffFailureHandler;
+import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.testcontainers.containers.GenericContainer;
 
@@ -44,8 +45,7 @@ public class ExampleLocalTopology {
      */
     public ExampleLocalTopology() {
         // Setup REDIS Container.
-        redis = new GenericContainer<>(RedisTestHelper.REDIS_DOCKER_CONTAINER_IMAGE)
-            .withExposedPorts(6379);
+        redis = RedisTestContainer.newRedisContainer();
     }
 
     /**
@@ -65,8 +65,7 @@ public class ExampleLocalTopology {
             // Create config
             final RedisStreamSpoutConfig.Builder configBuilder = RedisStreamSpoutConfig.newBuilder()
                 // Set Connection Properties
-                .withHost(redis.getHost())
-                .withPort(redis.getFirstMappedPort())
+                .withServer(redis.getHost(), redis.getFirstMappedPort())
                 // Consumer Properties
                 .withGroupName(groupName)
                 .withConsumerIdPrefix(consumerPrefix)
