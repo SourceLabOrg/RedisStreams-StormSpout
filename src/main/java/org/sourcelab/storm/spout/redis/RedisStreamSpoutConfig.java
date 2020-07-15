@@ -89,9 +89,14 @@ public class RedisStreamSpoutConfig implements Serializable {
     ) {
         // Connection
         if (redisCluster != null && redisServer != null) {
-            throw new IllegalStateException("TODO");
+            throw new IllegalStateException(
+                "You cannot configure connection details for both a single Redis server and RedisCluster. "
+                + "Use either Builder.withServer() OR Builder.withClusterNode(), but NOT both. "
+                + "If talking to a single Redis instance use Builder.withServer(). "
+                + "If talking to a RedisCluster use Builder.withClusterNode() to configure one or more nodes in the cluster."
+            );
         } else if (redisCluster == null && redisServer == null) {
-            throw new IllegalStateException("TODO");
+            throw new IllegalStateException("You must configure connection details for either a single Redis server and RedisCluster.");
         }
 
         this.redisCluster = redisCluster;
@@ -254,7 +259,12 @@ public class RedisStreamSpoutConfig implements Serializable {
         private Builder withServer(final RedisServer redisServer) {
             if (!clusterNodes.isEmpty()) {
                 // Cannot define both cluster servers and redis server instances.
-                throw new IllegalArgumentException("TODO");
+                throw new IllegalStateException(
+                    "You cannot configure connection details for both a single Redis server and RedisCluster. "
+                    + "Use either Builder.withServer() OR Builder.withClusterNode(), but NOT both. "
+                    + "If talking to a single Redis instance use Builder.withServer(). "
+                    + "If talking to a RedisCluster use Builder.withClusterNode() to configure one or more nodes in the cluster."
+                );
             }
             this.redisServer = Objects.requireNonNull(redisServer);
             return this;
@@ -301,7 +311,12 @@ public class RedisStreamSpoutConfig implements Serializable {
         private Builder withClusterNode(final RedisServer node) {
             if (redisServer != null) {
                 // Cannot define both cluster servers and redis server instances.
-                throw new IllegalArgumentException("TODO");
+                throw new IllegalStateException(
+                    "You cannot configure connection details for both a single Redis server and RedisCluster. "
+                        + "Use either Builder.withServer() OR Builder.withClusterNode(), but NOT both. "
+                        + "If talking to a single Redis instance use Builder.withServer(). "
+                        + "If talking to a RedisCluster use Builder.withClusterNode() to configure one or more nodes in the cluster."
+                );
             }
             clusterNodes.add(Objects.requireNonNull(node));
             return this;
