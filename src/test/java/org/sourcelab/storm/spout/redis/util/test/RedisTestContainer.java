@@ -1,11 +1,7 @@
 package org.sourcelab.storm.spout.redis.util.test;
 
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.testcontainers.containers.FixedHostPortGenericContainer;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.startupcheck.MinimumDurationRunningStartupCheckStrategy;
 
 import java.time.Duration;
@@ -60,7 +56,7 @@ public class RedisTestContainer extends FixedHostPortGenericContainer<RedisTestC
 
     public RedisStreamSpoutConfig.Builder addConnectionDetailsToConfig(final RedisStreamSpoutConfig.Builder builder) {
         if (isCluster) {
-            builder.withCluster(getHost(), getPort());
+            builder.withClusterNode(getHost(), getPort());
         } else {
             builder.withServer(getHost(), getPort());
         }

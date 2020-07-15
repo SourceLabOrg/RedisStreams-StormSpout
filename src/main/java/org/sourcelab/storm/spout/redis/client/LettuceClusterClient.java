@@ -7,7 +7,8 @@ import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import java.util.Objects;
 
 /**
- *
+ * Adapter for talking to a RedisCluster.
+ * If you need to talk to a single Redis instance {@link LettuceRedisClient}.
  */
 public class LettuceClusterClient implements LettuceAdapter {
     /**

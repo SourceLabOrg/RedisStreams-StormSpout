@@ -3,16 +3,14 @@ package org.sourcelab.storm.spout.redis.client;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisStreamCommands;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
 /**
- * Adapter for RedisClient.
+ * Adapter for talking to a single Redis instance.
+ * If you need to talk to a RedisCluster {@link LettuceClusterClient}.
  */
 public class LettuceRedisClient implements LettuceAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(LettuceRedisClient.class);
 
     /**
      * The underlying Redis Client.

@@ -58,8 +58,10 @@ public class LettuceClient implements Client {
         this(
             config,
             instanceId,
-            config.isConnectingToCluster() ?
-                new LettuceClusterClient(RedisClusterClient.create(config.getConnectString()))
+            // Determine which adapter to use based on what type of redis instance we are
+            // communicating with.
+            config.isConnectingToCluster()
+                ? new LettuceClusterClient(RedisClusterClient.create(config.getConnectString()))
                 : new LettuceRedisClient(RedisClient.create(config.getConnectString()))
         );
     }

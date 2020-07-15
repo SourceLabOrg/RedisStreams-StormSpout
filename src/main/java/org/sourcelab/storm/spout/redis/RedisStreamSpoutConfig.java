@@ -185,7 +185,7 @@ public class RedisStreamSpoutConfig implements Serializable {
         /**
          * Connection details.
          */
-        private final List<RedisServer> clusterServers = new ArrayList<>();
+        private final List<RedisServer> clusterNodes = new ArrayList<>();
         private RedisServer redisServer = null;
 
         /**
@@ -217,8 +217,43 @@ public class RedisStreamSpoutConfig implements Serializable {
         private Builder() {
         }
 
-        public Builder withServer(final RedisServer redisServer) {
-            if (!clusterServers.isEmpty()) {
+        /**
+         * Define connection details for connecting to a single Redis server.
+         *
+         * NOTE: If you want to connect to a RedisCluster, {@link Builder#withClusterNode}.
+         *
+         * @param host Host of redis server to connect to.
+         * @param port Port of redis server to connect to.
+         * @return Builder.
+         */
+        public Builder withServer(final String host, final int port) {
+            return withServer(host, port, null);
+        }
+
+        /**
+         * Define connection details for connecting to a single Redis server.
+         *
+         * NOTE: If you want to connect to a RedisCluster, {@link Builder#withClusterNode}.
+         *
+         * @param host Host of redis server to connect to.
+         * @param port Port of redis server to connect to.
+         * @param password (optional) Password for redis server, or NULL if no password required.
+         * @return Builder.
+         */
+        public Builder withServer(final String host, final int port, final String password) {
+            return withServer(new RedisServer(host, port, password));
+        }
+
+        /**
+         * Define connection details for connecting to a single Redis server.
+         *
+         * NOTE: If you want to connect to a RedisCluster, {@link Builder#withClusterNode}.
+         *
+         * @param redisServer Defines a redis server to connect to.
+         * @return Builder.
+         */
+        private Builder withServer(final RedisServer redisServer) {
+            if (!clusterNodes.isEmpty()) {
                 // Cannot define both cluster servers and redis server instances.
                 throw new IllegalArgumentException("TODO");
             }
@@ -226,43 +261,50 @@ public class RedisStreamSpoutConfig implements Serializable {
             return this;
         }
 
-        public Builder withServer(final String host, final int port, final String password) {
-            return withServer(new RedisServer(host, port, password));
+        /**
+         * Define connection details for connecting to a RedisCluster.
+         * Call this method as many times as needed to add nodes in your cluster.
+         *
+         * NOTE: If you want to connect to a single redis instance, {@link Builder#withServer}.
+         *
+         * @param host Host of redis node.
+         * @param port Port of redis node.
+         * @return Builder.
+         */
+        public Builder withClusterNode(final String host, final int port) {
+            return withClusterNode(host, port, null);
         }
 
-        public Builder withServer(final String host, final int port) {
-            return withServer(host, port, null);
+        /**
+         * Define connection details for connecting to a RedisCluster.
+         * Call this method as many times as needed to add nodes in your cluster.
+         *
+         * NOTE: If you want to connect to a single redis instance, {@link Builder#withServer}.
+         *
+         * @param host Host of redis node.
+         * @param port Port of redis node.
+         * @param password (optional) Password for redis node, or NULL if no password required.
+         * @return Builder.
+         */
+        public Builder withClusterNode(final String host, final int port, final String password) {
+            return withClusterNode(new RedisServer(host, port, password));
         }
 
-
-        public Builder withClusters(final RedisServer...clusterServers) {
-            Arrays.stream(clusterServers)
-                .forEach(this::withCluster);
-            return this;
-        }
-
-        public Builder withCluster(final RedisServer clusterServer) {
+        /**
+         * Define connection details for connecting to a RedisCluster.
+         * Call this method as many times as needed to add nodes in your cluster.
+         *
+         * NOTE: If you want to connect to a single redis instance, {@link Builder#withServer}.
+         *
+         * @param node Defines a node in the RedisCluster.
+         * @return Builder.
+         */
+        private Builder withClusterNode(final RedisServer node) {
             if (redisServer != null) {
                 // Cannot define both cluster servers and redis server instances.
                 throw new IllegalArgumentException("TODO");
             }
-            clusterServers.add(Objects.requireNonNull(clusterServer));
-            return this;
-        }
-
-        public Builder withCluster(final String host, final int port, final String password) {
-            return withCluster(new RedisServer(host, port, password));
-        }
-
-        public Builder withCluster(final String host, final int port) {
-            return withCluster(host, port, null);
-        }
-
-        public Builder withCluster(final RedisCluster redisCluster) {
-            Objects.requireNonNull(redisCluster);
-
-            this.clusterServers.clear();
-            this.clusterServers.addAll(redisCluster.getServers());
+            clusterNodes.add(Objects.requireNonNull(node));
             return this;
         }
 
@@ -335,8 +377,8 @@ public class RedisStreamSpoutConfig implements Serializable {
          */
         public RedisStreamSpoutConfig build() {
             RedisCluster redisCluster = null;
-            if (!clusterServers.isEmpty()) {
-                redisCluster = new RedisCluster(clusterServers);
+            if (!clusterNodes.isEmpty()) {
+                redisCluster = new RedisCluster(clusterNodes);
             }
 
             return new RedisStreamSpoutConfig(
@@ -354,13 +396,16 @@ public class RedisStreamSpoutConfig implements Serializable {
         }
     }
 
+    /**
+     * Defines a RedisCluster connection details.
+     */
     public static class RedisCluster {
         private final List<RedisServer> servers;
 
-        public RedisCluster(final RedisServer...servers) {
-            this(Arrays.asList(servers));
-        }
-
+        /**
+         * Constructor.
+         * @param servers One or more Nodes in the RedisCluster.
+         */
         public RedisCluster(final List<RedisServer> servers) {
             Objects.requireNonNull(servers);
             this.servers = Collections.unmodifiableList(new ArrayList<>(servers));
@@ -377,6 +422,10 @@ public class RedisStreamSpoutConfig implements Serializable {
                 + '}';
         }
 
+        /**
+         * The URI for connecting to this RedisCluster.
+         * @return URI for the cluster.
+         */
         public String getConnectString() {
             return getServers().stream()
                 .map(RedisServer::getConnectString)
@@ -384,15 +433,29 @@ public class RedisStreamSpoutConfig implements Serializable {
         }
     }
 
+    /**
+     * Defines a Single RedisServer instance connection details.
+     */
     public static class RedisServer {
         private final String host;
         private final int port;
         private final String password;
 
+        /**
+         * Constructor.
+         * @param host hostname of redis server.
+         * @param port port of redis server.
+         */
         public RedisServer(final String host, final int port) {
             this(host, port, null);
         }
 
+        /**
+         * Constructor.
+         * @param host hostname of redis server.
+         * @param port port of redis server.
+         * @param password (optional) password for server, or NULL if not required.
+         */
         public RedisServer(final String host, final int port, final String password) {
             this.host = host;
             this.port = port;
@@ -411,10 +474,10 @@ public class RedisStreamSpoutConfig implements Serializable {
             return password;
         }
 
-        public boolean hasPassword() {
-            return password != null;
-        }
-
+        /**
+         * The URI for connecting to this Redis Server instance.
+         * @return URI for the server.
+         */
         public String getConnectString() {
             String connectStr = "redis://";
 
