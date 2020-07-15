@@ -11,7 +11,6 @@ import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffConfig;
 import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffFailureHandler;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
-import org.testcontainers.containers.GenericContainer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,9 +20,11 @@ import java.util.Map;
 
 /**
  * Example topology using the RedisStreamSpout deployed against a LocalTopology cluster.
+ *
+ * NOTE: This required Docker to run.
  */
 public class ExampleLocalTopology {
-    private final GenericContainer redis;
+    private final RedisTestContainer redis;
     private Thread producerThread;
 
     /**
@@ -120,7 +121,7 @@ public class ExampleLocalTopology {
     private void startProducerThread(final String streamKey) {
         final Runnable runnable = () -> {
             // Create helper
-            final RedisTestHelper testHelper = new RedisTestHelper("redis://" + redis.getHost() + ":" + redis.getFirstMappedPort());
+            final RedisTestHelper testHelper = redis.getRedisTestHelper();
 
             long tupleCounter = 0L;
             do {
