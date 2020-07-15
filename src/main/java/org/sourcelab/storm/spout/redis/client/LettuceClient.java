@@ -9,6 +9,8 @@ import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.api.sync.RedisStreamCommands;
+import io.lettuce.core.cluster.RedisClusterClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.Message;
@@ -38,13 +40,7 @@ public class LettuceClient implements Client {
     /**
      * The underlying Redis Client.
      */
-    private final RedisClient redisClient;
-
-    /**
-     * Underlying connection objects.
-     */
-    private StatefulRedisConnection<String, String> connection;
-    private RedisCommands<String, String> syncCommands;
+    private final LettuceAdapter client;
 
     /**
      * Re-usable instance to prevent unnecessary garbage creation.
@@ -62,7 +58,8 @@ public class LettuceClient implements Client {
         this(
             config,
             instanceId,
-            RedisClient.create(config.getConnectString())
+            //new LettuceRedisClient(RedisClient.create(config.getConnectString()))
+            new LettuceClusterClient(RedisClusterClient.create(config.getConnectString()))
         );
     }
 
@@ -70,11 +67,11 @@ public class LettuceClient implements Client {
      * Protected constructor for injecting a RedisClient instance, typically for tests.
      * @param config Configuration.
      * @param instanceId Which instance number is this running under.
-     * @param redisClient RedisClient instance.
+     * @param client RedisClient instance.
      */
-    LettuceClient(final RedisStreamSpoutConfig config, final int instanceId, final RedisClient redisClient) {
+    LettuceClient(final RedisStreamSpoutConfig config, final int instanceId, final LettuceAdapter client) {
         this.config = Objects.requireNonNull(config);
-        this.redisClient = Objects.requireNonNull(redisClient);
+        this.client = Objects.requireNonNull(client);
 
         // Calculate consumerId
         this.consumerId = config.getConsumerIdPrefix() + instanceId;
@@ -95,17 +92,15 @@ public class LettuceClient implements Client {
 
     @Override
     public void connect() {
-        if (connection != null) {
+        if (client.isConnected()) {
             throw new IllegalStateException("Cannot call connect more than once!");
         }
 
-        // Connect
-        connection = redisClient.connect();
-        syncCommands = connection.sync();
+        client.connect();
 
         try {
             // Attempt to create consumer group
-            syncCommands.xgroupCreate(
+            client.getSyncCommands().xgroupCreate(
                 // Start the group at first offset for our key.
                 XReadArgs.StreamOffset.from(config.getStreamKey(), "0-0"),
                 // Define the group name
@@ -133,7 +128,7 @@ public class LettuceClient implements Client {
     @Override
     public List<Message> nextMessages() {
         // Get next batch of messages.
-        final List<StreamMessage<String, String>> messages = syncCommands.xreadgroup(
+        final List<StreamMessage<String, String>> messages = client.getSyncCommands().xreadgroup(
             consumerFrom,
             xreadArgs,
             lastConsumed
@@ -149,7 +144,7 @@ public class LettuceClient implements Client {
     @Override
     public void commitMessage(final String msgId) {
         // Confirm that the message has been processed using XACK
-        syncCommands.xack(
+        client.getSyncCommands().xack(
             config.getStreamKey(),
             config.getGroupName(),
             msgId
@@ -158,11 +153,6 @@ public class LettuceClient implements Client {
 
     @Override
     public void disconnect() {
-        // Close our connection and shutdown.
-        if (connection != null) {
-            connection.close();
-            connection = null;
-        }
-        redisClient.shutdown();
+        client.shutdown();
     }
 }

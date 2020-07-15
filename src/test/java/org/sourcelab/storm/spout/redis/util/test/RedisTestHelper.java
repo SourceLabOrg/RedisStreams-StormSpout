@@ -3,8 +3,11 @@ package org.sourcelab.storm.spout.redis.util.test;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.lettuce.core.api.sync.RedisStreamCommands;
+import io.lettuce.core.cluster.RedisClusterClient;
+import org.sourcelab.storm.spout.redis.client.LettuceAdapter;
+import org.sourcelab.storm.spout.redis.client.LettuceClusterClient;
+import org.sourcelab.storm.spout.redis.client.LettuceRedisClient;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,23 +19,38 @@ import java.util.Objects;
  * Test Helper for interacting with a live Redis server.
  */
 public class RedisTestHelper implements AutoCloseable {
-    private static final Logger logger = LoggerFactory.getLogger(RedisTestHelper.class);
+    public static final String REDIS_DOCKER_CONTAINER_IMAGE = "redis:6.0.5-alpine";
+    private final LettuceAdapter redisClient;
 
-    private final RedisClient redisClient;
-    private final StatefulRedisConnection<String, String> connection;
+    @Deprecated
+    public RedisTestHelper(final String connectStr) {
+        redisClient = new LettuceRedisClient(RedisClient.create(connectStr));
+        redisClient.connect();
+    }
 
     /**
      * Constructor.
-     * @param connectStr Redis Connect string.
      */
-    public RedisTestHelper(final String connectStr) {
-        this.redisClient = RedisClient.create(connectStr);
-        this.connection = redisClient.connect();
+    public RedisTestHelper(final LettuceAdapter adapter) {
+        this.redisClient = Objects.requireNonNull(adapter);
+        this.redisClient.connect();
+    }
+
+    public static RedisTestHelper createRedisHelper(final String connectStr) {
+        return new RedisTestHelper(
+            new LettuceRedisClient(RedisClient.create(connectStr))
+        );
+    }
+
+    public static RedisTestHelper createClusterHelper(final String connectStr) {
+        return new RedisTestHelper(
+            new LettuceClusterClient(RedisClusterClient.create(connectStr))
+        );
     }
 
     public void createStreamKey(final String key) {
         Objects.requireNonNull(key);
-        final RedisCommands<String, String> syncCommands = connection.sync();
+        final RedisStreamCommands<String, String> syncCommands = redisClient.getSyncCommands();
 
         final Map<String, String> messageBody = new HashMap<>();
         messageBody.put("key", "0");
@@ -47,7 +65,7 @@ public class RedisTestHelper implements AutoCloseable {
     public List<String> produceMessages(final String stream, final int numberOfMessages) {
         final List<String> messageIds = new ArrayList<>();
 
-        final RedisCommands<String, String> commands = connection.sync();
+        final RedisStreamCommands<String, String> commands = redisClient.getSyncCommands();
 
         for (int index = 0; index < numberOfMessages; index++) {
             final Map<String, String> messageBody = new HashMap<>();
@@ -71,7 +89,7 @@ public class RedisTestHelper implements AutoCloseable {
      * @return messageId produced.
      */
     public String produceMessage(final String stream, final Map<String, String> values) {
-        final RedisCommands<String, String> commands = connection.sync();
+        final RedisStreamCommands<String, String> commands = redisClient.getSyncCommands();
 
         return commands.xadd(
             stream,
@@ -97,7 +115,7 @@ public class RedisTestHelper implements AutoCloseable {
      * @return Map of ConsumerId => Details about that consumer.
      */
     public Map<String, StreamConsumerInfo> getStreamInfo(final String streamKey, final String groupName) {
-        final RedisCommands<String, String> commands = connection.sync();
+        final RedisStreamCommands<String, String> commands = redisClient.getSyncCommands();
         final List<Object> result = commands.xinfoConsumers(streamKey, groupName);
 
         final Map<String, StreamConsumerInfo> consumerInfos = new HashMap<>();
@@ -143,9 +161,7 @@ public class RedisTestHelper implements AutoCloseable {
         return consumerInfos;
     }
 
-    @Override
     public void close() {
-        connection.close();
         redisClient.shutdown();
     }
 }

@@ -50,7 +50,7 @@ class RedisStreamSpoutIntegrationTest {
      * This test depends on the following Redis Container.
      */
     @Container
-    public GenericContainer redis = new GenericContainer<>("redis:5.0.3-alpine")
+    public GenericContainer redis = new GenericContainer<>(RedisTestHelper.REDIS_DOCKER_CONTAINER_IMAGE)
         .withExposedPorts(6379);
 
     // Configuration values

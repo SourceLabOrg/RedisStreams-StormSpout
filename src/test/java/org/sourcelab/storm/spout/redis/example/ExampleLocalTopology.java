@@ -44,7 +44,7 @@ public class ExampleLocalTopology {
      */
     public ExampleLocalTopology() {
         // Setup REDIS Container.
-        redis = new GenericContainer<>("redis:5.0.3-alpine")
+        redis = new GenericContainer<>(RedisTestHelper.REDIS_DOCKER_CONTAINER_IMAGE)
             .withExposedPorts(6379);
     }
 

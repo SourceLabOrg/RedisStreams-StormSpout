@@ -8,10 +8,15 @@ import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
+import org.testcontainers.DockerClientFactory;
+import org.testcontainers.containers.FixedHostPortGenericContainer;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.startupcheck.MinimumDurationRunningStartupCheckStrategy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -25,12 +30,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Testcontainers
 @Tag("Integration")
 class LettuceClientIntegrationTest {
+
     /**
      * This test depends ont he following Redis Container.
      */
     @Container
-    public GenericContainer redis = new GenericContainer<>("redis:5.0.3-alpine")
-        .withExposedPorts(6379);
+//    public GenericContainer redis = new GenericContainer<>(RedisTestHelper.REDIS_DOCKER_CONTAINER_IMAGE)
+//        .withExposedPorts(6379);
+
+    //public GenericContainer redis = new GenericContainer<>("grokzen/redis-cluster:latest")
+    public GenericContainer redis = new FixedHostPortGenericContainer("grokzen/redis-cluster:latest")
+        //.withEnv("IP", DockerClientFactory.instance().dockerHostIpAddress())
+        //.withEnv("IP", "0.0.0.0")
+        .withFixedExposedPort(7000, 7000)
+        .withFixedExposedPort(7001, 7001)
+        .withFixedExposedPort(7002, 7002)
+        .withFixedExposedPort(7003, 7003)
+        .withFixedExposedPort(7004, 7004)
+        .withFixedExposedPort(7005, 7005)
+        .withEnv("IP", "127.0.0.1")
+        .withStartupCheckStrategy(
+            new MinimumDurationRunningStartupCheckStrategy(Duration.ofSeconds(10))
+        );
+
 
     private static final String CONSUMER_ID_PREFIX = "ConsumerId";
     private static final int MAX_CONSUMED_PER_READ = 10;
@@ -42,7 +64,7 @@ class LettuceClientIntegrationTest {
     private String streamKey;
 
     @BeforeEach
-    void setUp() {
+    void setUp(){
         // Generate a random stream key
         streamKey = "MyStreamKey" + System.currentTimeMillis();
 
@@ -53,7 +75,7 @@ class LettuceClientIntegrationTest {
         client = new LettuceClient(config, 1);
 
         // Ensure that the key exists!
-        redisTestHelper = new RedisTestHelper(config.getConnectString());
+        redisTestHelper = RedisTestHelper.createClusterHelper(config.getConnectString());
     }
 
     @AfterEach
@@ -77,7 +99,7 @@ class LettuceClientIntegrationTest {
      * Simple connect, consume, and disconnect smoke test for a single consumer.
      */
     @Test
-    void testSimpleConsume() {
+    void testSimpleConsume() throws InterruptedException {
         // Connect
         client.connect();
 
@@ -352,8 +374,10 @@ class LettuceClientIntegrationTest {
 
     private RedisStreamSpoutConfig createConfiguration(final String consumerId) {
         return RedisStreamSpoutConfig.newBuilder()
+//            .withHost(redis.getHost())
+//            .withPort(redis.getFirstMappedPort())
             .withHost(redis.getHost())
-            .withPort(redis.getFirstMappedPort())
+            .withPort(7000)
             .withGroupName("DefaultGroupName")
             .withStreamKey(streamKey)
             .withConsumerIdPrefix(consumerId)
