@@ -1,8 +1,6 @@
 package org.sourcelab.storm.spout.redis.util.test;
 
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.cluster.RedisClusterClient;
 import org.sourcelab.storm.spout.redis.client.LettuceAdapter;
@@ -21,46 +19,41 @@ import java.util.Objects;
 public class RedisTestHelper implements AutoCloseable {
     private final LettuceAdapter redisClient;
 
-    @Deprecated
-    public RedisTestHelper(final String connectStr) {
-        redisClient = new LettuceRedisClient(RedisClient.create(connectStr));
-        redisClient.connect();
-    }
-
     /**
      * Constructor.
+     * See Factory methods.
      */
-    public RedisTestHelper(final LettuceAdapter adapter) {
+    private RedisTestHelper(final LettuceAdapter adapter) {
         this.redisClient = Objects.requireNonNull(adapter);
         this.redisClient.connect();
     }
 
+    /**
+     * Factory method for creating an instance configured to talk to a single Redis instance.
+     * @param connectStr URI for Redis instance.
+     */
     public static RedisTestHelper createRedisHelper(final String connectStr) {
         return new RedisTestHelper(
             new LettuceRedisClient(RedisClient.create(connectStr))
         );
     }
 
+    /**
+     * Factory method for creating an instance configured to talk to a RedisCluster instance.
+     * @param connectStr URI for RedisCluster instance.
+     */
     public static RedisTestHelper createClusterHelper(final String connectStr) {
         return new RedisTestHelper(
             new LettuceClusterClient(RedisClusterClient.create(connectStr))
         );
     }
 
-    public void createStreamKey(final String key) {
-        Objects.requireNonNull(key);
-        final RedisStreamCommands<String, String> syncCommands = redisClient.getSyncCommands();
-
-        final Map<String, String> messageBody = new HashMap<>();
-        messageBody.put("key", "0");
-
-        // Write initial value.
-        final String messageId = syncCommands.xadd(
-            key,
-            messageBody
-        );
-    }
-
+    /**
+     * Produce generic messages into the supplied stream key.
+     * @param stream StreamKey to produce messages into.
+     * @param numberOfMessages How many messages to produce.
+     * @return List of MessageIds produced.
+     */
     public List<String> produceMessages(final String stream, final int numberOfMessages) {
         final List<String> messageIds = new ArrayList<>();
 
@@ -160,6 +153,9 @@ public class RedisTestHelper implements AutoCloseable {
         return consumerInfos;
     }
 
+    /**
+     * Shutdown lifecycle method.
+     */
     public void close() {
         redisClient.shutdown();
     }

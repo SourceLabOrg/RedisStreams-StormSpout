@@ -34,6 +34,9 @@ public class LettuceRedisClient implements LettuceAdapter {
 
     @Override
     public void connect() {
+        if (isConnected()) {
+            throw new IllegalStateException("Cannot call connect more than once!");
+        }
         connection = redisClient.connect();
     }
 

@@ -11,8 +11,6 @@ import org.apache.storm.utils.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.outputcollector.EmittedTuple;
@@ -20,7 +18,6 @@ import org.sourcelab.storm.spout.redis.util.outputcollector.StubSpoutCollector;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.sourcelab.storm.spout.redis.util.test.StreamConsumerInfo;
-import org.testcontainers.junit.jupiter.Container;
 
 import java.util.ArrayList;
 import java.util.Arrays;
