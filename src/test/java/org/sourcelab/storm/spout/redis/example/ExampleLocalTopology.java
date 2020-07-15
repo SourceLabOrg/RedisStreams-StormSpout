@@ -3,10 +3,12 @@ package org.sourcelab.storm.spout.redis.example;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.generated.StormTopology;
+import org.apache.storm.metric.LoggingMetricsConsumer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.sourcelab.storm.spout.redis.RedisStreamSpout;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
-import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
+import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffConfig;
+import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffFailureHandler;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.testcontainers.containers.GenericContainer;
 
@@ -70,7 +72,7 @@ public class ExampleLocalTopology {
                 .withConsumerIdPrefix(consumerPrefix)
                 .withStreamKey(streamKey)
                 // Failure Handler
-                .withFailureHandler(new RetryFailedTuples(1))
+                .withFailureHandler(new ExponentialBackoffFailureHandler(ExponentialBackoffConfig.defaultConfig()))
                 // Tuple Handler Class
                 .withTupleConverter(new TestTupleConverter("value"));
 
@@ -83,6 +85,10 @@ public class ExampleLocalTopology {
             // Create configuration
             final Config config = new Config();
             config.setDebug(enableDebug);
+            // Never fall back to java serialization
+            config.setFallBackOnJavaSerialization(false);
+            // Logging metrics consumer for metrics validation.
+            config.registerMetricsConsumer(LoggingMetricsConsumer.class);
 
             // Submits the topology to the local cluster
             localCluster.submitTopology(

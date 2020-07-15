@@ -626,12 +626,12 @@ class ExponentialBackoffFailureHandlerTest {
 
     private void verifyMetricInteractions() {
         verify(mockTopologyContext, times(1))
-            .registerCounter(eq("failureHandler.exceededRetryLimit"));
+            .registerCounter(eq("failureHandler_exceededRetryLimit"));
         verify(mockTopologyContext, times(1))
-            .registerCounter(eq("failureHandler.retriedMessages"));
+            .registerCounter(eq("failureHandler_retriedMessages"));
         verify(mockTopologyContext, times(1))
-            .registerCounter(eq("failureHandler.successfulRetriedMessages"));
+            .registerCounter(eq("failureHandler_successfulRetriedMessages"));
         verify(mockTopologyContext, times(1))
-            .registerGauge(eq("failureHandler.queuedForRetry"), any(Gauge.class));
+            .registerGauge(eq("failureHandler_queuedForRetry"), any(Gauge.class));
     }
 }

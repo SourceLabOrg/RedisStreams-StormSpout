@@ -63,6 +63,14 @@ public class ExponentialBackoffConfig implements Serializable {
         return new Builder();
     }
 
+    /**
+     * Create a new default configuration.
+     * @return Default configuration.
+     */
+    public static ExponentialBackoffConfig defaultConfig() {
+        return new Builder().build();
+    }
+
     public int getRetryLimit() {
         return retryLimit;
     }

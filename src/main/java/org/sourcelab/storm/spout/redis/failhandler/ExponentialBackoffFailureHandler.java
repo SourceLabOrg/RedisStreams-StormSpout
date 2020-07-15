@@ -28,7 +28,7 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
      * Used to control timing around retries.
      * Also allows for injecting a mock clock for testing.
      */
-    private transient Clock clock = Clock.systemUTC();
+    private transient Clock clock;
 
     /**
      * This map hows how many times each messageId has failed.
@@ -253,10 +253,10 @@ public class ExponentialBackoffFailureHandler implements FailureHandler {
          * @param retryQueue Our internal retry queue to collect size data.
          */
         public MetricHandler(final TopologyContext topologyContext, final TreeMap<Long, Queue<Message>> retryQueue) {
-            metricExceededRetryLimitCount = topologyContext.registerCounter("failureHandler.exceededRetryLimit");
-            metricRetriedMessagesCount = topologyContext.registerCounter("failureHandler.retriedMessages");
-            metricSuccessfulRetriedMessagesCounter = topologyContext.registerCounter("failureHandler.successfulRetriedMessages");
-            topologyContext.registerGauge("failureHandler.queuedForRetry", () ->
+            metricExceededRetryLimitCount = topologyContext.registerCounter("failureHandler_exceededRetryLimit");
+            metricRetriedMessagesCount = topologyContext.registerCounter("failureHandler_retriedMessages");
+            metricSuccessfulRetriedMessagesCounter = topologyContext.registerCounter("failureHandler_successfulRetriedMessages");
+            topologyContext.registerGauge("failureHandler_queuedForRetry", () ->
                 retryQueue.values().stream()
                 .mapToLong(Collection::size)
                 .sum()

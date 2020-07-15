@@ -28,15 +28,15 @@ public class RetryFailedTuples implements FailureHandler, Serializable {
     private final Map<String, Long> messageCounter = new HashMap<>();
 
     /**
-     * Contains a FIFO queue for failed messages.
-     */
-    private LinkedBlockingQueue<Message> messageQueue = new LinkedBlockingQueue<>();
-
-    /**
      * How many times a failed message should be replayed.
      * A value of 0 means never give up on a message and always replay it.
      */
     private final int maxRetries;
+
+    /**
+     * Contains a FIFO queue for failed messages.
+     */
+    private transient LinkedBlockingQueue<Message> messageQueue;
 
     /**
      * Constructor.
@@ -48,7 +48,8 @@ public class RetryFailedTuples implements FailureHandler, Serializable {
 
     @Override
     public void open(final Map<String, Object> stormConfig, final TopologyContext topologyContext) {
-        // no-op
+        // Create queue
+        messageQueue = new LinkedBlockingQueue<>();
     }
 
     @Override
