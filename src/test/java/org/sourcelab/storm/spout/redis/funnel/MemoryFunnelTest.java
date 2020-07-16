@@ -47,8 +47,7 @@ class MemoryFunnelTest {
     void testPassingMessages() {
         // Create config
         final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
-            .withHost("host")
-            .withPort(123)
+            .withServer("host", 123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
             .withConsumerIdPrefix("ConsumerId")
@@ -108,8 +107,7 @@ class MemoryFunnelTest {
     void testPassingAcks() {
         // Create config
         final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
-            .withHost("host")
-            .withPort(123)
+            .withServer("host", 123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
             .withConsumerIdPrefix("ConsumerId")
@@ -164,8 +162,7 @@ class MemoryFunnelTest {
     void test_failureHandler() {
         // Create config
         final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
-            .withHost("host")
-            .withPort(123)
+            .withServer("host", 123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
             .withConsumerIdPrefix("ConsumerId")
@@ -261,8 +258,7 @@ class MemoryFunnelTest {
     void test_disablingMetricsDoesNotRegisterMetrics() {
         // Create config
         final RedisStreamSpoutConfig config = RedisStreamSpoutConfig.newBuilder()
-            .withHost("host")
-            .withPort(123)
+            .withServer("host", 123)
             .withGroupName("GroupName")
             .withStreamKey("Key")
             .withConsumerIdPrefix("ConsumerId")

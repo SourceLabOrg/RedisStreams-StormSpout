@@ -2,15 +2,12 @@ package org.sourcelab.storm.spout.redis.client;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
+import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,16 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Testcontainers
-@Tag("Integration")
-class LettuceClientIntegrationTest {
-    /**
-     * This test depends ont he following Redis Container.
-     */
-    @Container
-    public GenericContainer redis = new GenericContainer<>("redis:5.0.3-alpine")
-        .withExposedPorts(6379);
-
+/**
+ * Abstract Integration test over LettuceClient.
+ * Used as a base to test the client against both a single Redis instance, and against
+ * a RedisCluster instance.
+ */
+abstract class AbstractLettuceClientIntegrationTest {
     private static final String CONSUMER_ID_PREFIX = "ConsumerId";
     private static final int MAX_CONSUMED_PER_READ = 10;
 
@@ -41,8 +34,10 @@ class LettuceClientIntegrationTest {
     private LettuceClient client;
     private String streamKey;
 
+    abstract RedisTestContainer getTestContainer();
+
     @BeforeEach
-    void setUp() {
+    void setUp(){
         // Generate a random stream key
         streamKey = "MyStreamKey" + System.currentTimeMillis();
 
@@ -52,8 +47,8 @@ class LettuceClientIntegrationTest {
         // Create client instance under test.
         client = new LettuceClient(config, 1);
 
-        // Ensure that the key exists!
-        redisTestHelper = new RedisTestHelper(config.getConnectString());
+        // Create test helper instance.
+        redisTestHelper = getTestContainer().getRedisTestHelper();
     }
 
     @AfterEach
@@ -77,7 +72,7 @@ class LettuceClientIntegrationTest {
      * Simple connect, consume, and disconnect smoke test for a single consumer.
      */
     @Test
-    void testSimpleConsume() {
+    void testSimpleConsume() throws InterruptedException {
         // Connect
         client.connect();
 
@@ -351,15 +346,16 @@ class LettuceClientIntegrationTest {
     }
 
     private RedisStreamSpoutConfig createConfiguration(final String consumerId) {
-        return RedisStreamSpoutConfig.newBuilder()
-            .withHost(redis.getHost())
-            .withPort(redis.getFirstMappedPort())
+        final RedisStreamSpoutConfig.Builder builder = RedisStreamSpoutConfig.newBuilder()
             .withGroupName("DefaultGroupName")
             .withStreamKey(streamKey)
             .withConsumerIdPrefix(consumerId)
             .withMaxConsumePerRead(MAX_CONSUMED_PER_READ)
             .withNoRetryFailureHandler()
-            .withTupleConverter(new TestTupleConverter())
+            .withTupleConverter(new TestTupleConverter());
+
+        return getTestContainer()
+            .addConnectionDetailsToConfig(builder)
             .build();
     }
 }

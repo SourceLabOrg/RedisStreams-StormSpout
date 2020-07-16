@@ -21,7 +21,7 @@ import java.util.Objects;
 /**
  * Redis Stream based Spout for Apache Storm 2.2.x.
  */
-public class RedisStreamSpout implements IRichSpout {
+public class RedisStreamSpout implements IRichSpout, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(RedisStreamSpout.class);
 
     /**

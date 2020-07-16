@@ -6,7 +6,8 @@ This project is an [Apache Storm](https://storm.apache.org/) Spout for consuming
 
 ### Features
 
-- Ability to consume from Redis Streams while maintaing state.
+- Ability to consume from Redis Streams while maintaining state.
+- Ability to consume from a single Redis server or a RedisCluster.
 - Parallelism supported via unique Consumer Ids.
 
 ### Usage & Configuration
@@ -30,9 +31,6 @@ The spout is configured using the [RedisStreamSpoutConfig](src/main/java/org/sou
 
 | Property | Required | Description |
 |----------|----------|-------------|
-| `Host`   | Required | The hostname to connect to Redis at. |
-| `Port`   | Required | The port to connect to Redis at. |
-| `Password` | optional | Password to connect to Redis using. |
 | `Group Name` | Required | The Consumer group name the Spout should use. |
 | `Consumer Id Prefix` | Required | A prefix to use for generating unique Consumer Ids within the Consumer Group.  To support multiple parallel consumers, the Spout instance will be appended to the end of this value. |
 | `Stream Key` | Required | The Redis key to consume messages from. |
@@ -44,17 +42,24 @@ The spout is configured using the [RedisStreamSpoutConfig](src/main/java/org/sou
 ```java
     // Create config
     final RedisStreamSpoutConfig.Builder config = RedisStreamSpoutConfig.newBuilder()
-        // Set Connection Properties
-        .withHost("localhost")
-        .withPort(6179)
+        // If you want to connect to a single Redis instance:
+        .withServer("localhost", 6759)
+
+        // OR if you want to talk to a RedisCluster:
+        .withClusterNode("node1.hostname.com", 6759)
+        .withClusterNode("node2.hostname.com", 6759)
+        ...
+        
         // Consumer Properties
         .withGroupName("StormConsumerGroup")
         .withConsumerIdPrefix("StormConsumer")
         .withStreamKey("RedisStreamKeyName")
-        // Tuple Handler Class
+
+        // Tuple Converter instance (see note below)
         .withTupleConverter(..Your TupleConvertor implementation...)
-        // Failure Handler
-        .withFailureHandler(new RetryFailedTuples(10));
+
+        // Failure Handler instance (see note below)
+        .withFailureHandler(new ExponentialBackoffFailureHandler(...));
         
 
     // Create Spout

@@ -9,8 +9,8 @@ import org.sourcelab.storm.spout.redis.RedisStreamSpout;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
 import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffConfig;
 import org.sourcelab.storm.spout.redis.failhandler.ExponentialBackoffFailureHandler;
+import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
-import org.testcontainers.containers.GenericContainer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,9 +20,11 @@ import java.util.Map;
 
 /**
  * Example topology using the RedisStreamSpout deployed against a LocalTopology cluster.
+ *
+ * NOTE: This required Docker to run.
  */
 public class ExampleLocalTopology {
-    private final GenericContainer redis;
+    private final RedisTestContainer redis;
     private Thread producerThread;
 
     /**
@@ -44,8 +46,7 @@ public class ExampleLocalTopology {
      */
     public ExampleLocalTopology() {
         // Setup REDIS Container.
-        redis = new GenericContainer<>("redis:5.0.3-alpine")
-            .withExposedPorts(6379);
+        redis = RedisTestContainer.newRedisContainer();
     }
 
     /**
@@ -65,8 +66,7 @@ public class ExampleLocalTopology {
             // Create config
             final RedisStreamSpoutConfig.Builder configBuilder = RedisStreamSpoutConfig.newBuilder()
                 // Set Connection Properties
-                .withHost(redis.getHost())
-                .withPort(redis.getFirstMappedPort())
+                .withServer(redis.getHost(), redis.getFirstMappedPort())
                 // Consumer Properties
                 .withGroupName(groupName)
                 .withConsumerIdPrefix(consumerPrefix)
@@ -121,7 +121,7 @@ public class ExampleLocalTopology {
     private void startProducerThread(final String streamKey) {
         final Runnable runnable = () -> {
             // Create helper
-            final RedisTestHelper testHelper = new RedisTestHelper("redis://" + redis.getHost() + ":" + redis.getFirstMappedPort());
+            final RedisTestHelper testHelper = redis.getRedisTestHelper();
 
             long tupleCounter = 0L;
             do {
