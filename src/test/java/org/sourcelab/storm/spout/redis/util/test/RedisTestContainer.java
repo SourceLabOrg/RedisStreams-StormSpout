@@ -58,16 +58,17 @@ public class RedisTestContainer extends FixedHostPortGenericContainer<RedisTestC
      */
     public static RedisTestContainer newRedisClusterContainer() {
         return new RedisTestContainer(REDIS_CLUSTER_DOCKER_CONTAINER_IMAGE)
-            // Fixed ports
+            // Because of how RedisCluster service discovery works, we MUST use fixed ports.
             .withFixedExposedPort(7000, 7000)
             .withFixedExposedPort(7001, 7001)
             .withFixedExposedPort(7002, 7002)
             .withFixedExposedPort(7003, 7003)
             .withFixedExposedPort(7004, 7004)
             .withFixedExposedPort(7005, 7005)
-            // Override IP so Discovery Works.
+
+            // Override IP so Discovery works.
             .withEnv("IP", "127.0.0.1")
-            // TODO need to come up with a better solution to determining if the cluster is online.
+            // TODO need to come up with a better solution to determining if the cluster is online and ready.
             .withStartupCheckStrategy(
                 new MinimumDurationRunningStartupCheckStrategy(Duration.ofSeconds(10))
             );

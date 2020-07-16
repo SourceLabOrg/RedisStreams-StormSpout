@@ -38,10 +38,14 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- *
+ * Abstract Integration test.  Meant to allow for defining shared test cases that can be validated
+ * against both a Redis instance as well as RedisCluster instance.
  */
 abstract class AbstractRedisStreamSpoutIntegrationTest {
 
+    /**
+     * @return The Appropriate RedisTestContainer instance.
+     */
     abstract RedisTestContainer getTestContainer();
 
     // Configuration values
@@ -102,14 +106,15 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     @Test
     void smokeTest_openAndClose() {
         // Create spout
-        final ISpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
 
-        // Open spout
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Close spout
-        spout.close();
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+
+            // Close spout via autocloseable
+        }
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -121,23 +126,21 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     @Test
     void smokeTest_openActivateDeactivateAndClose() throws InterruptedException {
         // Create spout
-        final ISpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
 
-        // activate spout
-        spout.activate();
+            // activate spout
+            spout.activate();
 
-        // Small sleep
-        Thread.sleep(3000L);
+            // Small sleep
+            Thread.sleep(3000L);
 
-        // Deactivate (noop)
-        spout.deactivate();
-
-        // Close spout
-        spout.close();
+            // Deactivate and close via Autoclosable
+            spout.deactivate();
+        }
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -155,27 +158,28 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
             .withServer(getTestContainer().getHost(), 124);
 
         // Create spout
-        final ISpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
 
-        // activate spout
-        spout.activate();
+            // activate spout
+            spout.activate();
 
-        // Small sleep
-        Thread.sleep(3000L);
+            // Small sleep
+            Thread.sleep(3000L);
 
-        // Deactivate (noop)
-        spout.deactivate();
+            // Deactivate (noop)
+            spout.deactivate();
 
-        // Lets try calling activate one more time
-        spout.activate();
-        spout.deactivate();
+            // Lets try calling activate one more time
+            spout.activate();
+            spout.deactivate();
 
-        // Close spout
-        spout.close();
+            // Deactivate and close via Autocloseable
+            spout.deactivate();
+        }
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -187,83 +191,83 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     @Test
     void smokeTest_consumeAndAckMessages() throws InterruptedException {
         // Create spout
-        final ISpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
 
-        // activate spout
-        spout.activate();
+            // activate spout
+            spout.activate();
 
-        // Lets publish 10 messages to the stream
-        final List<String> producedMsgIds = redisTestHelper.produceMessages(streamKey, 10);
+            // Lets publish 10 messages to the stream
+            final List<String> producedMsgIds = redisTestHelper.produceMessages(streamKey, 10);
 
-        // Now lets try to get those from the spout
-        do {
-            spout.nextTuple();
-            Thread.sleep(100L);
-        } while (collector.getEmittedTuples().size() < 10);
+            // Now lets try to get those from the spout
+            do {
+                spout.nextTuple();
+                Thread.sleep(100L);
+            } while (collector.getEmittedTuples().size() < 10);
 
-        // Call next tuple a few more times, should be a no-op
-        for (int counter = 0; counter < 10; counter++) {
-            Thread.sleep(100L);
-            spout.nextTuple();
+            // Call next tuple a few more times, should be a no-op
+            for (int counter = 0; counter < 10; counter++) {
+                Thread.sleep(100L);
+                spout.nextTuple();
+            }
+
+            // Verify what got emitted.
+            assertEquals(10, collector.getEmittedTuples().size(), "Should have found 10 emitted tuples.");
+
+            final String expectedStreamId = Utils.DEFAULT_STREAM_ID;
+            for (int index = 0; index < producedMsgIds.size(); index++) {
+                final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
+
+                // Verify message Id.
+                assertEquals(producedMsgIds.get(index), emittedTuple.getMessageId());
+
+                // Verify Stream Id
+                assertEquals(expectedStreamId, emittedTuple.getStreamId());
+
+                // Verify tuple value
+                assertEquals(3, emittedTuple.getTuple().size(), "Should have 3 values");
+
+                // Look for value
+                final String expectedValue = "value" + index;
+                boolean foundValue = emittedTuple.getTuple().stream()
+                    .anyMatch((entry) -> entry.equals(expectedValue));
+                assertTrue(foundValue, "Failed to find key tuple value");
+
+                final String expectedMsgIdValue = producedMsgIds.get(index);
+                foundValue = emittedTuple.getTuple().stream()
+                    .anyMatch((entry) -> entry.equals(expectedMsgIdValue));
+                assertTrue(foundValue, "Failed to find msgId tuple value");
+            }
+
+            // See that we have 10 items pending
+            StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+            assertNotNull(consumerInfo, "Failed to find consumer info!");
+
+            // Verify we have 10 items pending
+            assertEquals(10L, consumerInfo.getPending(), "Found entries pending");
+
+            // Now Ack the messages
+            collector.getEmittedTuples().stream()
+                .map(EmittedTuple::getMessageId)
+                .forEach(spout::ack);
+
+            // Small delay waiting for processing.
+            Thread.sleep(1000L);
+
+            // Verify that our message were acked in redis.
+            consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+            assertNotNull(consumerInfo, "Failed to find consumer info!");
+
+            // Verify we have nothing pending
+            assertEquals(0L, consumerInfo.getPending(), "Found entries pending?");
+
+            // Deactivate and close via Autocloseable
+            spout.deactivate();
         }
-
-        // Verify what got emitted.
-        assertEquals(10, collector.getEmittedTuples().size(), "Should have found 10 emitted tuples.");
-
-        final String expectedStreamId = Utils.DEFAULT_STREAM_ID;
-        for (int index = 0; index < producedMsgIds.size(); index++) {
-            final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
-
-            // Verify message Id.
-            assertEquals(producedMsgIds.get(index), emittedTuple.getMessageId());
-
-            // Verify Stream Id
-            assertEquals(expectedStreamId, emittedTuple.getStreamId());
-
-            // Verify tuple value
-            assertEquals(3, emittedTuple.getTuple().size(), "Should have 3 values");
-
-            // Look for value
-            final String expectedValue = "value" + index;
-            boolean foundValue = emittedTuple.getTuple().stream()
-                .anyMatch((entry) -> entry.equals(expectedValue));
-            assertTrue(foundValue, "Failed to find key tuple value");
-
-            final String expectedMsgIdValue = producedMsgIds.get(index);
-            foundValue = emittedTuple.getTuple().stream()
-                .anyMatch((entry) -> entry.equals(expectedMsgIdValue));
-            assertTrue(foundValue, "Failed to find msgId tuple value");
-        }
-
-        // See that we have 10 items pending
-        StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-        assertNotNull(consumerInfo, "Failed to find consumer info!");
-
-        // Verify we have 10 items pending
-        assertEquals(10L, consumerInfo.getPending(), "Found entries pending");
-
-        // Now Ack the messages
-        collector.getEmittedTuples().stream()
-            .map(EmittedTuple::getMessageId)
-            .forEach(spout::ack);
-
-        // Small delay waiting for processing.
-        Thread.sleep(1000L);
-
-        // Verify that our message were acked in redis.
-        consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-        assertNotNull(consumerInfo, "Failed to find consumer info!");
-
-        // Verify we have nothing pending
-        assertEquals(0L, consumerInfo.getPending(), "Found entries pending?");
-
-        // Deactivate and close
-        spout.deactivate();
-        spout.close();
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -278,115 +282,115 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
         configBuilder.withFailureHandler(new RetryFailedTuples(2));
 
         // Create spout
-        final ISpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
 
-        // activate spout
-        spout.activate();
+            // activate spout
+            spout.activate();
 
-        // Lets publish 10 messages to the stream
-        List<String> producedMsgIds = redisTestHelper.produceMessages(streamKey, 10);
+            // Lets publish 10 messages to the stream
+            List<String> producedMsgIds = redisTestHelper.produceMessages(streamKey, 10);
 
-        // Now lets try to get 5 of those those from the spout...
-        do {
-            spout.nextTuple();
-            Thread.sleep(100L);
-        } while (collector.getEmittedTuples().size() < 5);
+            // Now lets try to get 5 of those those from the spout...
+            do {
+                spout.nextTuple();
+                Thread.sleep(100L);
+            } while (collector.getEmittedTuples().size() < 5);
 
 
-        // Verify what got emitted.
-        assertEquals(5, collector.getEmittedTuples().size(), "Should have found 10 emitted tuples.");
+            // Verify what got emitted.
+            assertEquals(5, collector.getEmittedTuples().size(), "Should have found 10 emitted tuples.");
 
-        final String expectedStreamId = Utils.DEFAULT_STREAM_ID;
-        for (int index = 0; index < 5; index++) {
-            final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
+            final String expectedStreamId = Utils.DEFAULT_STREAM_ID;
+            for (int index = 0; index < 5; index++) {
+                final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
 
-            // Verify message Id.
-            assertEquals(producedMsgIds.get(index), emittedTuple.getMessageId());
+                // Verify message Id.
+                assertEquals(producedMsgIds.get(index), emittedTuple.getMessageId());
 
-            // Verify Stream Id
-            assertEquals(expectedStreamId, emittedTuple.getStreamId());
+                // Verify Stream Id
+                assertEquals(expectedStreamId, emittedTuple.getStreamId());
 
-            // Verify tuple value
-            assertEquals(3, emittedTuple.getTuple().size(), "Should have 3 values");
+                // Verify tuple value
+                assertEquals(3, emittedTuple.getTuple().size(), "Should have 3 values");
 
-            // Look for value
-            final String expectedValue = "value" + index;
-            boolean foundValue = emittedTuple.getTuple().stream()
-                .anyMatch((entry) -> entry.equals(expectedValue));
-            assertTrue(foundValue, "Failed to find key tuple value");
+                // Look for value
+                final String expectedValue = "value" + index;
+                boolean foundValue = emittedTuple.getTuple().stream()
+                    .anyMatch((entry) -> entry.equals(expectedValue));
+                assertTrue(foundValue, "Failed to find key tuple value");
 
-            final String expectedMsgIdValue = producedMsgIds.get(index);
-            foundValue = emittedTuple.getTuple().stream()
-                .anyMatch((entry) -> entry.equals(expectedMsgIdValue));
-            assertTrue(foundValue, "Failed to find msgId tuple value");
-        }
-
-        // See that we have 10 items pending
-        StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-        assertNotNull(consumerInfo, "Failed to find consumer info!");
-        assertEquals(10L, consumerInfo.getPending(), "Found entries pending");
-
-        final List<String> messageIdsToFail = new ArrayList<>();
-
-        for (int index = 0; index < 5; index++) {
-            // Now ack the first 3 messages
-            if (index < 3) {
-                spout.ack(
-                    collector.getEmittedTuples().get(index).getMessageId()
-                );
-            } else {
-                // Fail the remaining two
-                messageIdsToFail.add((String) collector.getEmittedTuples().get(index).getMessageId());
-                spout.fail(
-                    collector.getEmittedTuples().get(index).getMessageId()
-                );
+                final String expectedMsgIdValue = producedMsgIds.get(index);
+                foundValue = emittedTuple.getTuple().stream()
+                    .anyMatch((entry) -> entry.equals(expectedMsgIdValue));
+                assertTrue(foundValue, "Failed to find msgId tuple value");
             }
+
+            // See that we have 10 items pending
+            StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+            assertNotNull(consumerInfo, "Failed to find consumer info!");
+            assertEquals(10L, consumerInfo.getPending(), "Found entries pending");
+
+            final List<String> messageIdsToFail = new ArrayList<>();
+
+            for (int index = 0; index < 5; index++) {
+                // Now ack the first 3 messages
+                if (index < 3) {
+                    spout.ack(
+                        collector.getEmittedTuples().get(index).getMessageId()
+                    );
+                } else {
+                    // Fail the remaining two
+                    messageIdsToFail.add((String) collector.getEmittedTuples().get(index).getMessageId());
+                    spout.fail(
+                        collector.getEmittedTuples().get(index).getMessageId()
+                    );
+                }
+            }
+
+            // And reset our collector
+            collector.reset();
+
+            // Small delay waiting for processing.
+            Thread.sleep(1000L);
+
+            // Verify that our message were acked in redis.
+            consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+            assertNotNull(consumerInfo, "Failed to find consumer info!");
+
+            // Verify we have 7 pending
+            assertEquals(7L, consumerInfo.getPending(), "Found entries pending");
+
+            // Ask for the next two tuples, we should get our failed tuples back out.
+            do {
+                spout.nextTuple();
+            } while (collector.getEmittedTuples().size() < 2);
+
+            // We should have emitted two tuples.
+            assertEquals(2, collector.getEmittedTuples().size());
+            assertEquals(messageIdsToFail.get(0), collector.getEmittedTuples().get(0).getMessageId());
+            assertEquals(messageIdsToFail.get(1), collector.getEmittedTuples().get(1).getMessageId());
+
+            // Ack them
+            spout.ack(messageIdsToFail.get(0));
+            spout.ack(messageIdsToFail.get(1));
+
+            // Small delay waiting for processing.
+            Thread.sleep(1000L);
+
+            // Verify that our message were acked in redis.
+            consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+            assertNotNull(consumerInfo, "Failed to find consumer info!");
+
+            // Verify we have 5 pending
+            assertEquals(5L, consumerInfo.getPending(), "Found entries pending");
+
+            // Deactivate and close via Autocloseable
+            spout.deactivate();
         }
-
-        // And reset our collector
-        collector.reset();
-
-        // Small delay waiting for processing.
-        Thread.sleep(1000L);
-
-        // Verify that our message were acked in redis.
-        consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-        assertNotNull(consumerInfo, "Failed to find consumer info!");
-
-        // Verify we have 7 pending
-        assertEquals(7L, consumerInfo.getPending(), "Found entries pending");
-
-        // Ask for the next two tuples, we should get our failed tuples back out.
-        do {
-            spout.nextTuple();
-        } while (collector.getEmittedTuples().size() < 2);
-
-        // We should have emitted two tuples.
-        assertEquals(2, collector.getEmittedTuples().size());
-        assertEquals(messageIdsToFail.get(0), collector.getEmittedTuples().get(0).getMessageId());
-        assertEquals(messageIdsToFail.get(1), collector.getEmittedTuples().get(1).getMessageId());
-
-        // Ack them
-        spout.ack(messageIdsToFail.get(0));
-        spout.ack(messageIdsToFail.get(1));
-
-        // Small delay waiting for processing.
-        Thread.sleep(1000L);
-
-        // Verify that our message were acked in redis.
-        consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-        assertNotNull(consumerInfo, "Failed to find consumer info!");
-
-        // Verify we have 5 pending
-        assertEquals(5L, consumerInfo.getPending(), "Found entries pending");
-
-        // Deactivate and close
-        spout.deactivate();
-        spout.close();
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -404,36 +408,36 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
         configBuilder.withTupleConverter(converter);
 
         // Create spout
-        final IRichSpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout and activate.
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
-        spout.activate();
+            // Open spout and activate.
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            spout.activate();
 
-        // Publish 9 records to redis.
-        redisTestHelper.produceMessages(streamKey, 9);
+            // Publish 9 records to redis.
+            redisTestHelper.produceMessages(streamKey, 9);
 
-        // Pull via spout
-        do {
-            spout.nextTuple();
-        } while (collector.getEmittedTuples().size() < 9);
+            // Pull via spout
+            do {
+                spout.nextTuple();
+            } while (collector.getEmittedTuples().size() < 9);
 
-        // We should have emitted 9 tuples.
-        assertEquals(9, collector.getEmittedTuples().size());
+            // We should have emitted 9 tuples.
+            assertEquals(9, collector.getEmittedTuples().size());
 
-        // Make sure each tuple went out on the correct stream
-        for (int index = 0; index < 9; index++) {
-            final String expectedStream = "stream" + ((index % 3) + 1);
-            final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
+            // Make sure each tuple went out on the correct stream
+            for (int index = 0; index < 9; index++) {
+                final String expectedStream = "stream" + ((index % 3) + 1);
+                final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
 
-            // Verify stream
-            assertEquals(expectedStream, emittedTuple.getStreamId());
+                // Verify stream
+                assertEquals(expectedStream, emittedTuple.getStreamId());
+            }
+
+            // Deactivate and close via Autocloseable
+            spout.deactivate();
         }
-
-        // Deactivate and close
-        spout.deactivate();
-        spout.close();
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -451,47 +455,47 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
         configBuilder.withTupleConverter(converter);
 
         // Create spout
-        // Create spout
-        final IRichSpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
 
-        // Ask for stream names
-        final OutputFieldsGetter getter = new OutputFieldsGetter();
-        spout.declareOutputFields(getter);
+            // Ask for stream names
+            final OutputFieldsGetter getter = new OutputFieldsGetter();
+            spout.declareOutputFields(getter);
 
-        // Validate
-        final Map<String, StreamInfo> entries = getter.getFieldsDeclaration();
-        assertEquals(3, entries.size(), "Should have 3 entries");
+            // Validate
+            final Map<String, StreamInfo> entries = getter.getFieldsDeclaration();
+            assertEquals(3, entries.size(), "Should have 3 entries");
 
-        // Verify Stream1
-        assertTrue(entries.containsKey("stream1"), "should have entry for 'stream1'");
-        StreamInfo info = entries.get("stream1");
-        assertEquals(3, info.get_output_fields().size(), "Should have 3 fields");
-        assertEquals("field_a", info.get_output_fields().get(0));
-        assertEquals("field_b", info.get_output_fields().get(1));
-        assertEquals("field_c", info.get_output_fields().get(2));
+            // Verify Stream1
+            assertTrue(entries.containsKey("stream1"), "should have entry for 'stream1'");
+            StreamInfo info = entries.get("stream1");
+            assertEquals(3, info.get_output_fields().size(), "Should have 3 fields");
+            assertEquals("field_a", info.get_output_fields().get(0));
+            assertEquals("field_b", info.get_output_fields().get(1));
+            assertEquals("field_c", info.get_output_fields().get(2));
 
-        // Verify Stream2
-        assertTrue(entries.containsKey("stream2"), "should have entry for 'stream2'");
-        info = entries.get("stream2");
-        assertEquals(3, info.get_output_fields().size(), "Should have 3 fields");
-        assertEquals("field_d", info.get_output_fields().get(0));
-        assertEquals("field_e", info.get_output_fields().get(1));
-        assertEquals("field_f", info.get_output_fields().get(2));
+            // Verify Stream2
+            assertTrue(entries.containsKey("stream2"), "should have entry for 'stream2'");
+            info = entries.get("stream2");
+            assertEquals(3, info.get_output_fields().size(), "Should have 3 fields");
+            assertEquals("field_d", info.get_output_fields().get(0));
+            assertEquals("field_e", info.get_output_fields().get(1));
+            assertEquals("field_f", info.get_output_fields().get(2));
 
-        // Verify Stream3
-        assertTrue(entries.containsKey("stream3"), "should have entry for 'stream3'");
-        info = entries.get("stream3");
-        assertEquals(3, info.get_output_fields().size(), "Should have 3 fields");
-        assertEquals("field_g", info.get_output_fields().get(0));
-        assertEquals("field_h", info.get_output_fields().get(1));
-        assertEquals("field_i", info.get_output_fields().get(2));
+            // Verify Stream3
+            assertTrue(entries.containsKey("stream3"), "should have entry for 'stream3'");
+            info = entries.get("stream3");
+            assertEquals(3, info.get_output_fields().size(), "Should have 3 fields");
+            assertEquals("field_g", info.get_output_fields().get(0));
+            assertEquals("field_h", info.get_output_fields().get(1));
+            assertEquals("field_i", info.get_output_fields().get(2));
 
-        // Deactivate and close
-        spout.close();
+            // Deactivate and close via Autocloseable
+            spout.deactivate();
+        }
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();
@@ -510,37 +514,37 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
         configBuilder.withTupleConverter(converter);
 
         // Create spout
-        final IRichSpout spout = new RedisStreamSpout(configBuilder.build());
-        final StubSpoutCollector collector = new StubSpoutCollector();
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
 
-        // Open spout and activate
-        spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
-        spout.activate();
+            // Open spout and activate
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            spout.activate();
 
-        // Publish 10 records to redis.
-        redisTestHelper.produceMessages(streamKey, 10);
+            // Publish 10 records to redis.
+            redisTestHelper.produceMessages(streamKey, 10);
 
-        // Attempt to pull via spout.
-        // We expect to get nothing.
-        final long endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
-        do {
-            spout.nextTuple();
-        } while (System.currentTimeMillis() < endTime);
+            // Attempt to pull via spout.
+            // We expect to get nothing.
+            final long endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+            do {
+                spout.nextTuple();
+            } while (System.currentTimeMillis() < endTime);
 
-        // We should have emitted 0 tuples.
-        assertEquals(0, collector.getEmittedTuples().size());
+            // We should have emitted 0 tuples.
+            assertEquals(0, collector.getEmittedTuples().size());
 
-        // Verify that all are showing as acked in redis.
-        // See that we have 10 items pending
-        StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-        assertNotNull(consumerInfo, "Failed to find consumer info!");
+            // Verify that all are showing as acked in redis.
+            // See that we have 10 items pending
+            StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+            assertNotNull(consumerInfo, "Failed to find consumer info!");
 
-        // Verify we have 0 items pending
-        assertEquals(0L, consumerInfo.getPending(), "Found entries pending");
+            // Verify we have 0 items pending
+            assertEquals(0L, consumerInfo.getPending(), "Found entries pending");
 
-        // Deactivate and close
-        spout.deactivate();
-        spout.close();
+            // Deactivate and close via Autocloseable
+            spout.deactivate();
+        }
 
         // Verify mocks
         verify(mockTopologyContext, times(1)).getThisTaskIndex();

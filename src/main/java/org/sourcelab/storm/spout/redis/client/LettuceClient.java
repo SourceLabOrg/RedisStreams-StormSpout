@@ -37,7 +37,7 @@ public class LettuceClient implements Client {
     /**
      * The underlying Redis Client.
      */
-    private final LettuceAdapter client;
+    private final LettuceAdapter adapter;
 
     /**
      * Re-usable instance to prevent unnecessary garbage creation.
@@ -58,8 +58,8 @@ public class LettuceClient implements Client {
             // Determine which adapter to use based on what type of redis instance we are
             // communicating with.
             config.isConnectingToCluster()
-                ? new LettuceClusterClient(RedisClusterClient.create(config.getConnectString()))
-                : new LettuceRedisClient(RedisClient.create(config.getConnectString()))
+                ? new LettuceClusterAdapter(RedisClusterClient.create(config.getConnectString()))
+                : new LettuceRedisAdapter(RedisClient.create(config.getConnectString()))
         );
     }
 
@@ -67,11 +67,11 @@ public class LettuceClient implements Client {
      * Protected constructor for injecting a RedisClient instance, typically for tests.
      * @param config Configuration.
      * @param instanceId Which instance number is this running under.
-     * @param client RedisClient instance.
+     * @param adapter RedisClient instance.
      */
-    LettuceClient(final RedisStreamSpoutConfig config, final int instanceId, final LettuceAdapter client) {
+    LettuceClient(final RedisStreamSpoutConfig config, final int instanceId, final LettuceAdapter adapter) {
         this.config = Objects.requireNonNull(config);
-        this.client = Objects.requireNonNull(client);
+        this.adapter = Objects.requireNonNull(adapter);
 
         // Calculate consumerId
         this.consumerId = config.getConsumerIdPrefix() + instanceId;
@@ -92,15 +92,15 @@ public class LettuceClient implements Client {
 
     @Override
     public void connect() {
-        if (client.isConnected()) {
+        if (adapter.isConnected()) {
             throw new IllegalStateException("Cannot call connect more than once!");
         }
 
-        client.connect();
+        adapter.connect();
 
         try {
             // Attempt to create consumer group
-            client.getSyncCommands().xgroupCreate(
+            adapter.getSyncCommands().xgroupCreate(
                 // Start the group at first offset for our key.
                 XReadArgs.StreamOffset.from(config.getStreamKey(), "0-0"),
                 // Define the group name
@@ -128,7 +128,7 @@ public class LettuceClient implements Client {
     @Override
     public List<Message> nextMessages() {
         // Get next batch of messages.
-        final List<StreamMessage<String, String>> messages = client.getSyncCommands().xreadgroup(
+        final List<StreamMessage<String, String>> messages = adapter.getSyncCommands().xreadgroup(
             consumerFrom,
             xreadArgs,
             lastConsumed
@@ -144,7 +144,7 @@ public class LettuceClient implements Client {
     @Override
     public void commitMessage(final String msgId) {
         // Confirm that the message has been processed using XACK
-        client.getSyncCommands().xack(
+        adapter.getSyncCommands().xack(
             config.getStreamKey(),
             config.getGroupName(),
             msgId
@@ -153,6 +153,6 @@ public class LettuceClient implements Client {
 
     @Override
     public void disconnect() {
-        client.shutdown();
+        adapter.shutdown();
     }
 }

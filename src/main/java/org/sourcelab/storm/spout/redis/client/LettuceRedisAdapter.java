@@ -1,28 +1,29 @@
 package org.sourcelab.storm.spout.redis.client;
 
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisStreamCommands;
-import io.lettuce.core.cluster.RedisClusterClient;
-import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 
 import java.util.Objects;
 
 /**
- * Adapter for talking to a RedisCluster.
- * If you need to talk to a single Redis instance {@link LettuceRedisClient}.
+ * Adapter for talking to a single Redis instance.
+ * If you need to talk to a RedisCluster {@link LettuceClusterAdapter}.
  */
-public class LettuceClusterClient implements LettuceAdapter {
+public class LettuceRedisAdapter implements LettuceAdapter {
+
     /**
      * The underlying Redis Client.
      */
-    private final RedisClusterClient redisClient;
+    private final RedisClient redisClient;
 
     /**
      * Underlying connection objects.
      */
-    private StatefulRedisClusterConnection<String, String> connection;
+    private StatefulRedisConnection<String, String> connection;
     private RedisStreamCommands<String, String> syncCommands;
 
-    public LettuceClusterClient(final RedisClusterClient redisClient) {
+    public LettuceRedisAdapter(final RedisClient redisClient) {
         this.redisClient = Objects.requireNonNull(redisClient);
     }
 
@@ -51,6 +52,7 @@ public class LettuceClusterClient implements LettuceAdapter {
     public void shutdown() {
         // Close our connection and shutdown.
         if (connection != null) {
+            syncCommands = null;
             connection.close();
             connection = null;
         }

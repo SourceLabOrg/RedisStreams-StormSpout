@@ -4,8 +4,8 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.cluster.RedisClusterClient;
 import org.sourcelab.storm.spout.redis.client.LettuceAdapter;
-import org.sourcelab.storm.spout.redis.client.LettuceClusterClient;
-import org.sourcelab.storm.spout.redis.client.LettuceRedisClient;
+import org.sourcelab.storm.spout.redis.client.LettuceClusterAdapter;
+import org.sourcelab.storm.spout.redis.client.LettuceRedisAdapter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +34,7 @@ public class RedisTestHelper implements AutoCloseable {
      */
     public static RedisTestHelper createRedisHelper(final String connectStr) {
         return new RedisTestHelper(
-            new LettuceRedisClient(RedisClient.create(connectStr))
+            new LettuceRedisAdapter(RedisClient.create(connectStr))
         );
     }
 
@@ -44,7 +44,7 @@ public class RedisTestHelper implements AutoCloseable {
      */
     public static RedisTestHelper createClusterHelper(final String connectStr) {
         return new RedisTestHelper(
-            new LettuceClusterClient(RedisClusterClient.create(connectStr))
+            new LettuceClusterAdapter(RedisClusterClient.create(connectStr))
         );
     }
 
