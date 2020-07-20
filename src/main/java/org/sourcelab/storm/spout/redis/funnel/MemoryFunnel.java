@@ -52,7 +52,8 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
 
     /**
      * Constructor.
-     * @param config configuration proeprties.
+     * @param config Configuration properties.
+     * @param stormConfig Configuration map passed from the spout.
      * @param topologyContext Storm TopologyContext instance.
      */
     public MemoryFunnel(

@@ -32,6 +32,7 @@ public class Consumer implements Runnable {
 
     /**
      * Protected constructor for injecting a RedisClient instance, typically for tests.
+     * @param config Spout configuration properties.
      * @param redisClient RedisClient instance.
      * @param funnel Funnel instance.
      */
