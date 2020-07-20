@@ -20,6 +20,7 @@ public interface LettuceAdapter {
 
     /**
      * Get sync Redis Stream Commands instance.
+     * @return Available synchronous stream commands.
      */
     RedisStreamCommands<String, String> getSyncCommands();
 

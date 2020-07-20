@@ -15,6 +15,7 @@ public interface Client {
 
     /**
      * Retrieve the next batch of messages from Redis Stream.
+     * @return List of next Messages consumed from Redis Stream.
      */
     List<Message> nextMessages();
 

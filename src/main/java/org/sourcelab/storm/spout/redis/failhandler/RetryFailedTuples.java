@@ -17,13 +17,15 @@ import java.util.concurrent.LinkedBlockingQueue;
  * A value greater than 0 sets the upper limit on the number of times a message will fail before just being skipped.
  * A value equal to 0 says failed messages will NEVER be replayed.
  * A value less than 0 says ALWAYS replay failed messages until they are successful.
+ *
+ * Recommended to use {@link ExponentialBackoffFailureHandler} instead of this naive implementation.
  */
 public class RetryFailedTuples implements FailureHandler, Serializable {
     private static final Logger logger = LoggerFactory.getLogger(RetryFailedTuples.class);
 
     /**
      * This tracks how many times a specific msgId has been replayed.
-     * MsgId => Number of times we've replayed it.
+     * Maps MsgId to the Number of times it has been replayed.
      */
     private final Map<String, Long> messageCounter = new HashMap<>();
 

@@ -53,6 +53,7 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
     /**
      * Constructor.
      * @param config configuration proeprties.
+     * @param topologyContext Storm TopologyContext instance.
      */
     public MemoryFunnel(
         final RedisStreamSpoutConfig config,
@@ -60,6 +61,8 @@ public class MemoryFunnel implements SpoutFunnel, ConsumerFunnel {
         final TopologyContext topologyContext
     ) {
         Objects.requireNonNull(config);
+        Objects.requireNonNull(config);
+        Objects.requireNonNull(topologyContext);
 
         // These DO need to be concurrent.
         inFlightTuples = new ConcurrentHashMap<>(config.getMaxTupleQueueSize());

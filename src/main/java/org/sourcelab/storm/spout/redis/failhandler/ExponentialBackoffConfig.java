@@ -39,7 +39,14 @@ public class ExponentialBackoffConfig implements Serializable {
     private final boolean metricsEnabled;
 
     /**
-     * Constructor.  See Builder instance.
+     * Constructor.
+     * See {@link Builder} instance.
+     *
+     * @param retryLimit How many times to attempt to retry a failed message. Defaults to 10.
+     * @param initialRetryDelayMs Define minimum retry delay, in milliseconds. Defaults to 2000.
+     * @param retryDelayMultiplier At what rate to delay messages that continue to fail.  Defaults to 2.0.
+     * @param retryDelayMaxMs Maximum cap on time delay for failed messages.  Default to 10 minutes.
+     * @param metricsEnabled If true, metrics will be published about failed messages.
      */
     public ExponentialBackoffConfig(
         final int retryLimit,
@@ -119,6 +126,7 @@ public class ExponentialBackoffConfig implements Serializable {
 
         /**
          * Default multiplier to 2.0.
+         * This default value gives us an exponential backoff rate.
          */
         private double retryDelayMultiplier = 2.0;
 

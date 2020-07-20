@@ -13,6 +13,7 @@ public interface FailureHandler extends Serializable {
     /**
      * Lifecycle method.  Called once the Spout has started.
      * @param stormConfig Configuration map passed from the spout.
+     * @param topologyContext Storm TopologyContext instance.
      */
     void open(final Map<String, Object> stormConfig, final TopologyContext topologyContext);
 
