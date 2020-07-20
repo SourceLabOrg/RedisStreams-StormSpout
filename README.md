@@ -14,12 +14,11 @@ This project is an [Apache Storm](https://storm.apache.org/) Spout for consuming
 
 Include the dependency in your `POM.xml` file:
 
-**NOTE**: This project has not been published to MavenCentral yet.
-
 ```xml
 <dependency>
     <groupId>org.sourcelab.storm.spout</groupId>
     <artifactId>redis-stream-spout</artifactId>
+    <version>1.0.0</version>
 </dependency>
 ```  
 
