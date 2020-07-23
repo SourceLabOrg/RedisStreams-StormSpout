@@ -67,16 +67,6 @@ public class LettuceClient implements Client {
         );
     }
 
-    private static LettuceAdapter createAdapter(final RedisStreamSpoutConfig config) {
-        if (config.isConnectingToCluster()) {
-            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
-            return new LettuceClusterAdapter(RedisClusterClient.create(config.getConnectString()));
-        } else {
-            logger.info("Connecting to Redis server at {}", config.getConnectStringMasked());
-            return new LettuceRedisAdapter(RedisClient.create(config.getConnectString()));
-        }
-    }
-
     /**
      * Protected constructor for injecting a RedisClient instance, typically for tests.
      * @param config Configuration.
@@ -187,5 +177,20 @@ public class LettuceClient implements Client {
     @Override
     public void disconnect() {
         adapter.shutdown();
+    }
+
+    /**
+     * Factory method for creating the appropriate adapter based on configuration.
+     * @param config Spout configuration.
+     * @return Appropriate Adapter.
+     */
+    private static LettuceAdapter createAdapter(final RedisStreamSpoutConfig config) {
+        if (config.isConnectingToCluster()) {
+            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
+            return new LettuceClusterAdapter(RedisClusterClient.create(config.getConnectString()));
+        } else {
+            logger.info("Connecting to Redis server at {}", config.getConnectStringMasked());
+            return new LettuceRedisAdapter(RedisClient.create(config.getConnectString()));
+        }
     }
 }

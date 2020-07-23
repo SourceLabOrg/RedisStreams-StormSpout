@@ -8,6 +8,7 @@ import org.apache.storm.tuple.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.client.Client;
+import org.sourcelab.storm.spout.redis.client.ClientFactory;
 import org.sourcelab.storm.spout.redis.client.Consumer;
 import org.sourcelab.storm.spout.redis.client.lettuce.LettuceClient;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
@@ -85,7 +86,7 @@ public class RedisStreamSpout implements IRichSpout, AutoCloseable {
 
         // Create consumer and client
         final int taskIndex = topologyContext.getThisTaskIndex();
-        final Client client = new LettuceClient(config, taskIndex);
+        final Client client = new ClientFactory().createClient(config, taskIndex);
         final Consumer consumer = new Consumer(config, client, (ConsumerFunnel) funnel);
 
         // Create background consuming thread.

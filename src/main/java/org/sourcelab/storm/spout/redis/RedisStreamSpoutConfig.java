@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis;
 
+import org.sourcelab.storm.spout.redis.client.ClientType;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 
 import java.io.Serializable;
@@ -71,6 +72,11 @@ public class RedisStreamSpoutConfig implements Serializable {
     private final boolean metricsEnabled;
 
     /**
+     * Defines which underlying client library/implementation to use.
+     */
+    private final ClientType clientType;
+
+    /**
      * Constructor.
      * Use Builder instance.
      */
@@ -85,7 +91,7 @@ public class RedisStreamSpoutConfig implements Serializable {
 
         // Other settings
         final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis,
-        final boolean metricsEnabled
+        final boolean metricsEnabled, final ClientType clientType
     ) {
         // Connection
         if (redisCluster != null && redisServer != null) {
@@ -117,6 +123,9 @@ public class RedisStreamSpoutConfig implements Serializable {
         this.maxAckQueueSize = maxAckQueueSize;
         this.consumerDelayMillis = consumerDelayMillis;
         this.metricsEnabled = metricsEnabled;
+
+        // Client type implementation
+        this.clientType = Objects.requireNonNull(clientType);
     }
 
     public String getStreamKey() {
@@ -185,6 +194,10 @@ public class RedisStreamSpoutConfig implements Serializable {
         return metricsEnabled;
     }
 
+    public ClientType getClientType() {
+        return clientType;
+    }
+
     /**
      * Create a new Builder instance.
      * @return Builder for Configuration instance.
@@ -228,6 +241,12 @@ public class RedisStreamSpoutConfig implements Serializable {
         private int maxAckQueueSize = 1024;
         private long consumerDelayMillis = 1000L;
         private boolean metricsEnabled = true;
+
+        /**
+         * Underlying library to use.
+         * Defaults to using Lettuce.
+         */
+        private ClientType clientType = ClientType.LETTUCE;
 
         private Builder() {
         }
@@ -396,6 +415,19 @@ public class RedisStreamSpoutConfig implements Serializable {
             return this;
         }
 
+        public Builder withLettuceClientLibrary() {
+            return withClientType(ClientType.LETTUCE);
+        }
+
+        public Builder withJedisClientLibrary() {
+            return withClientType(ClientType.JEDIS);
+        }
+
+        public Builder withClientType(final ClientType clientType) {
+            this.clientType = Objects.requireNonNull(clientType);
+            return this;
+        }
+
         /**
          * Creates new Configuration instance.
          * @return Configuration instance.
@@ -416,7 +448,10 @@ public class RedisStreamSpoutConfig implements Serializable {
                 tupleConverter, failureHandler,
                 // Other settings
                 maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis,
-                metricsEnabled
+                metricsEnabled,
+
+                // Underlying client type
+                clientType
             );
         }
     }

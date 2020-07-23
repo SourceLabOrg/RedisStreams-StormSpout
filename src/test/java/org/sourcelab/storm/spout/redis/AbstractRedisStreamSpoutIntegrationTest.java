@@ -9,6 +9,9 @@ import org.apache.storm.utils.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.sourcelab.storm.spout.redis.client.ClientType;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.outputcollector.EmittedTuple;
@@ -101,8 +104,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Most basic lifecycle smoke test.
      */
-    @Test
-    void smokeTest_openAndClose() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_openAndClose(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create spout
         try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
 
@@ -121,8 +128,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Basic lifecycle smoke test.
      */
-    @Test
-    void smokeTest_openActivateDeactivateAndClose() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_openActivateDeactivateAndClose(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create spout
         try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
             final StubSpoutCollector collector = new StubSpoutCollector();
@@ -150,7 +161,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
      *
      * Disabled for now.
      */
-    void smokeTest_configureInvalidRedisHost() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_configureInvalidRedisHost(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Lets override the redis host with something invalid
         configBuilder
             .withServer(getTestContainer().getHost(), 124);
@@ -186,8 +202,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Basic usage test.
      */
-    @Test
-    void smokeTest_consumeAndAckMessages() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_consumeAndAckMessages(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create spout
         try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
             final StubSpoutCollector collector = new StubSpoutCollector();
@@ -274,8 +294,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Basic usage with retry failure handler.
      */
-    @Test
-    void smokeTest_consumeFailAndAckMessages() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_consumeFailAndAckMessages(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Swap out failure handler
         configBuilder.withFailureHandler(new RetryFailedTuples(2));
 
@@ -397,8 +421,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Verify declareOutputFields using TestTupleConverter.
      */
-    @Test
-    void test_declareOutputFields() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void test_declareOutputFields(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create a test implementation
         final TupleConverter converter = new DummyTupleConverter() ;
 
@@ -444,8 +472,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Verify spout emits tuples down the correct stream.
      */
-    @Test
-    void test_EmitDownSeparateStreams() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void test_EmitDownSeparateStreams(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create a test implementation
         final TupleConverter converter = new DummyTupleConverter() ;
 
@@ -503,8 +535,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
      * Verify if tuple converter instance returns null, then the message
      * is simply acked and nothing is emitted.
      */
-    @Test
-    void test_NullConversionJustGetsAckedNothingEmitted() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void test_NullConversionJustGetsAckedNothingEmitted(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create a test implementation
         final TupleConverter converter = new NullTupleConverter() ;
 

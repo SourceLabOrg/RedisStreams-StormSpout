@@ -45,17 +45,6 @@ public class JedisClient implements Client {
         );
     }
 
-    private static JedisAdapter createAdapter(final RedisStreamSpoutConfig config, final int instanceId) {
-        final String connectStr = config.getConnectString().replaceAll("redis://", "");
-        if (config.isConnectingToCluster()) {
-            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
-            return new JedisClusterAdapter(new JedisCluster(HostAndPort.parseString(connectStr)), config, instanceId);
-        } else {
-            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
-            return new JedisRedisAdapter(new Jedis(HostAndPort.parseString(connectStr)), config, instanceId);
-        }
-    }
-
     /**
      * Protected constructor for injecting a RedisClient instance, typically for tests.
      * @param adapter JedisAdapter instance.
@@ -110,5 +99,21 @@ public class JedisClient implements Client {
     @Override
     public void disconnect() {
         adapter.close();
+    }
+
+    /**
+     * Factory method for creating the appropriate adapter based on configuration.
+     * @param config Spout configuration.
+     * @return Appropriate Adapter.
+     */
+    private static JedisAdapter createAdapter(final RedisStreamSpoutConfig config, final int instanceId) {
+        final String connectStr = config.getConnectString().replaceAll("redis://", "");
+        if (config.isConnectingToCluster()) {
+            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
+            return new JedisClusterAdapter(new JedisCluster(HostAndPort.parseString(connectStr)), config, instanceId);
+        } else {
+            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
+            return new JedisRedisAdapter(new Jedis(HostAndPort.parseString(connectStr)), config, instanceId);
+        }
     }
 }
