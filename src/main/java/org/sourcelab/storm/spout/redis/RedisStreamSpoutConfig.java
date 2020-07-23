@@ -150,6 +150,17 @@ public class RedisStreamSpoutConfig implements Serializable {
         return redisCluster.getConnectString();
     }
 
+    /**
+     * The URI for connecting to this Redis Server instance with the password masked.
+     * @return URI for the server.
+     */
+    public String getConnectStringMasked() {
+        if (!isConnectingToCluster()) {
+            return redisServer.getConnectStringMasked();
+        }
+        return redisCluster.getConnectStringMasked();
+    }
+
     public int getMaxTupleQueueSize() {
         return maxTupleQueueSize;
     }
@@ -445,6 +456,16 @@ public class RedisStreamSpoutConfig implements Serializable {
                 .map(RedisServer::getConnectString)
                 .collect(Collectors.joining(","));
         }
+
+        /**
+         * The URI for connecting to this Redis Server instance with the password masked.
+         * @return URI for the server.
+         */
+        public String getConnectStringMasked() {
+            return getServers().stream()
+                .map(RedisServer::getConnectStringMasked)
+                .collect(Collectors.joining(","));
+        }
     }
 
     /**
@@ -497,6 +518,21 @@ public class RedisStreamSpoutConfig implements Serializable {
 
             if (getPassword() != null && !getPassword().trim().isEmpty()) {
                 connectStr += getPassword() + "@";
+            }
+            connectStr += getHost() + ":" + getPort();
+
+            return connectStr;
+        }
+
+        /**
+         * The URI for connecting to this Redis Server instance with the password masked.
+         * @return URI for the server.
+         */
+        public String getConnectStringMasked() {
+            String connectStr = "redis://";
+
+            if (getPassword() != null && !getPassword().trim().isEmpty()) {
+                connectStr += "XXXXXX@";
             }
             connectStr += getHost() + ":" + getPort();
 

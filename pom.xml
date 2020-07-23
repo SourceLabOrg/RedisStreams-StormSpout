@@ -48,6 +48,7 @@
 
         <!-- Redis Client -->
         <lettuceVersion>5.3.1.RELEASE</lettuceVersion>
+        <jedisVersion>3.2.0</jedisVersion>
 
         <!-- Define which version of JUnit 5 to -->
         <junit5Version>5.6.2</junit5Version>
@@ -77,6 +78,11 @@
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
             <version>${lettuceVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>${jedisVersion}</version>
         </dependency>
 
         <!-- Testing Dependencies -->

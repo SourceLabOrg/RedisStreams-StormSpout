@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.client.Client;
 import org.sourcelab.storm.spout.redis.client.Consumer;
-import org.sourcelab.storm.spout.redis.client.LettuceClient;
+import org.sourcelab.storm.spout.redis.client.lettuce.LettuceClient;
 import org.sourcelab.storm.spout.redis.funnel.ConsumerFunnel;
 import org.sourcelab.storm.spout.redis.funnel.MemoryFunnel;
 import org.sourcelab.storm.spout.redis.funnel.SpoutFunnel;

@@ -1,8 +1,8 @@
-package org.sourcelab.storm.spout.redis.client;
+package org.sourcelab.storm.spout.redis.client.lettuce;
 
-import io.lettuce.core.cluster.RedisClusterClient;
-import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
-import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,35 +16,36 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-class LettuceClusterAdapterTest {
-    private RedisClusterClient mockClusterClient;
-    private StatefulRedisClusterConnection mockConnection;
+class LettuceRedisAdapterTest {
+
+    private RedisClient mockRedisClient;
+    private StatefulRedisConnection mockConnection;
 
     @BeforeEach
     void setup() {
-        mockClusterClient = mock(RedisClusterClient.class);
-        mockConnection = mock(StatefulRedisClusterConnection.class);
+        mockRedisClient = mock(RedisClient.class);
+        mockConnection = mock(StatefulRedisConnection.class);
     }
 
     @AfterEach
     void cleanup() {
-        verifyNoMoreInteractions(mockClusterClient);
+        verifyNoMoreInteractions(mockRedisClient);
         verifyNoMoreInteractions(mockConnection);
     }
 
     @Test
     void testAdapter() {
-        final RedisAdvancedClusterCommands<String, String> mockCommands = mock(RedisAdvancedClusterCommands.class);
+        final RedisCommands<String, String> mockCommands = mock(RedisCommands.class);
 
         // Setup mocks
-        when(mockClusterClient.connect())
+        when(mockRedisClient.connect())
             .thenReturn(mockConnection);
 
         when(mockConnection.sync())
             .thenReturn(mockCommands);
 
         // Create instance
-        final LettuceClusterAdapter adapter = new LettuceClusterAdapter(mockClusterClient);
+        final LettuceRedisAdapter adapter = new LettuceRedisAdapter(mockRedisClient);
 
         // Verify "not connected"
         assertFalse(adapter.isConnected(), "Should return false");
@@ -56,7 +57,7 @@ class LettuceClusterAdapterTest {
         assertTrue(adapter.isConnected(), "Should return true");
 
         // Verify interactions
-        verify(mockClusterClient, times(1))
+        verify(mockRedisClient, times(1))
             .connect();
 
         // Call sync multiple times
@@ -72,6 +73,6 @@ class LettuceClusterAdapterTest {
         adapter.shutdown();
 
         verify(mockConnection, times(1)).close();
-        verify(mockClusterClient, times(1)).shutdown();
+        verify(mockRedisClient, times(1)).shutdown();
     }
 }

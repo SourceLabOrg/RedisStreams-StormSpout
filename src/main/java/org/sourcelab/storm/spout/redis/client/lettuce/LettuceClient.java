@@ -1,4 +1,4 @@
-package org.sourcelab.storm.spout.redis.client;
+package org.sourcelab.storm.spout.redis.client.lettuce;
 
 import io.lettuce.core.Consumer;
 import io.lettuce.core.RedisBusyException;
@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sourcelab.storm.spout.redis.Message;
 import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
+import org.sourcelab.storm.spout.redis.client.Client;
 
 import java.util.List;
 import java.util.Objects;
@@ -55,12 +56,19 @@ public class LettuceClient implements Client {
         this(
             config,
             instanceId,
-            // Determine which adapter to use based on what type of redis instance we are
-            // communicating with.
-            config.isConnectingToCluster()
-                ? new LettuceClusterAdapter(RedisClusterClient.create(config.getConnectString()))
-                : new LettuceRedisAdapter(RedisClient.create(config.getConnectString()))
+            // Determine which adapter to use based on what type of redis instance we are communicating with.
+            createAdapter(config)
         );
+    }
+
+    private static LettuceAdapter createAdapter(final RedisStreamSpoutConfig config) {
+        if (config.isConnectingToCluster()) {
+            logger.info("Connecting to RedisCluster at {}", config.getConnectStringMasked());
+            return new LettuceClusterAdapter(RedisClusterClient.create(config.getConnectString()));
+        } else {
+            logger.info("Connecting to Redis server at {}", config.getConnectStringMasked());
+            return new LettuceRedisAdapter(RedisClient.create(config.getConnectString()));
+        }
     }
 
     /**
@@ -87,6 +95,7 @@ public class LettuceClient implements Client {
         consumerFrom = Consumer.from(config.getGroupName(), consumerId);
 
         // Create re-usable lastConsumed instance.
+        // TODO need to switch from PPL to LastConsumed
         lastConsumed = XReadArgs.StreamOffset.lastConsumed(config.getStreamKey());
     }
 
