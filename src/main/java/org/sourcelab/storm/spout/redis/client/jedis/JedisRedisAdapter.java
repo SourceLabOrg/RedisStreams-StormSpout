@@ -15,7 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- *
+ * Adapter for talking to a single Redis instance.
+ * If you need to talk to a RedisCluster {@link JedisClusterAdapter}.
  */
 public class JedisRedisAdapter implements JedisAdapter {
     private static final Logger logger = LoggerFactory.getLogger(JedisRedisAdapter.class);
@@ -38,15 +39,16 @@ public class JedisRedisAdapter implements JedisAdapter {
      */
     private Map.Entry<String, StreamEntryID> streamPositionKey;
 
+    /**
+     * Constructor.
+     * @param jedis Underlying Jedis client instance.
+     * @param config Spout configuration.
+     * @param instanceId Spout instance Id.
+     */
     public JedisRedisAdapter(final Jedis jedis, final RedisStreamSpoutConfig config, final int instanceId) {
         this.jedis = Objects.requireNonNull(jedis);
         this.config = Objects.requireNonNull(config);
         this.consumerId = config.getConsumerIdPrefix() + instanceId;
-    }
-
-    @Override
-    public boolean isConnected() {
-        return jedis.isConnected();
     }
 
     @Override

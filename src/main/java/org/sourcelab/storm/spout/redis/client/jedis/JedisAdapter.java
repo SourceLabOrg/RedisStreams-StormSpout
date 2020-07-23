@@ -10,26 +10,35 @@ import java.util.Map;
  */
 public interface JedisAdapter {
     /**
-     * Is the underlying client connected?
-     * @return true if connected, false if not.
-     */
-    boolean isConnected();
-
-    /**
      * Call connect.
      */
     void connect();
 
+    /**
+     * Consume next batch of messages.
+     * @return List of messages consumed.
+     */
     List<Map.Entry<String, List<StreamEntry>>> consume();
 
+    /**
+     * Mark the provided messageId as acknowledged/completed.
+     * @param msgId Id of the message.
+     */
     void commit(final String msgId);
 
     /**
-     * Call shutdown.
+     * Disconnect client.
      */
     void close();
 
+    /**
+     * Advance the last offset consumed from PPL.
+     * @param lastMsgId Id of the last msg consumed.
+     */
     void advancePplOffset(final String lastMsgId);
 
+    /**
+     * Switch to consuming from latest messages.
+     */
     void switchToConsumerGroupMessages();
 }
