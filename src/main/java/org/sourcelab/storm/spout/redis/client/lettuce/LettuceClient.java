@@ -45,7 +45,13 @@ public class LettuceClient implements Client {
      */
     private final XReadArgs xreadArgs;
     private final Consumer<String> consumerFrom;
-    private final XReadArgs.StreamOffset<String> lastConsumed;
+
+    /**
+     * State for consuming first from consumer's personal pending list,
+     * then switching to reading from consumer group messages.
+     */
+    private boolean hasFinishedPpl = false;
+    private XReadArgs.StreamOffset<String> lastConsumed;
 
     /**
      * Constructor.
@@ -93,10 +99,6 @@ public class LettuceClient implements Client {
 
         // Create re-usable ConsumerFrom instance.
         consumerFrom = Consumer.from(config.getGroupName(), consumerId);
-
-        // Create re-usable lastConsumed instance.
-        // TODO need to switch from PPL to LastConsumed
-        lastConsumed = XReadArgs.StreamOffset.lastConsumed(config.getStreamKey());
     }
 
     @Override
@@ -106,6 +108,10 @@ public class LettuceClient implements Client {
         }
 
         adapter.connect();
+
+        // Create re-usable lastConsumed instance, default to consuming from PPL list
+        lastConsumed = XReadArgs.StreamOffset.from(config.getStreamKey(), "0-0");
+        hasFinishedPpl = false;
 
         try {
             // Attempt to create consumer group
@@ -137,17 +143,35 @@ public class LettuceClient implements Client {
     @Override
     public List<Message> nextMessages() {
         // Get next batch of messages.
-        final List<StreamMessage<String, String>> messages = adapter.getSyncCommands().xreadgroup(
+        final List<StreamMessage<String, String>> entries = adapter.getSyncCommands().xreadgroup(
             consumerFrom,
             xreadArgs,
             lastConsumed
         );
 
         // Loop over each message
-        return messages.stream()
+        final List<Message> messages = entries.stream()
             // Map into Message Object
             .map((streamMsg) -> new Message(streamMsg.getId(), streamMsg.getBody()))
             .collect(Collectors.toList());
+
+        if (!hasFinishedPpl) {
+            if (messages.isEmpty()) {
+                logger.info("Personal Pending List appears empty, switching to consuming from new messages.");
+
+                hasFinishedPpl = true;
+                lastConsumed = XReadArgs.StreamOffset.lastConsumed(config.getStreamKey());
+
+                // Re-attempt consuming
+                return nextMessages();
+            } else {
+                // Advance last index consumed from PPL so we don't continue to replay old messages.
+                final String lastId = messages.get(messages.size() - 1).getId();
+                lastConsumed = XReadArgs.StreamOffset.from(config.getStreamKey(), lastId);
+            }
+        }
+
+        return messages;
     }
 
     @Override

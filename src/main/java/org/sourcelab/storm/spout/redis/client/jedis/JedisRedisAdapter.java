@@ -65,7 +65,7 @@ public class JedisRedisAdapter implements JedisAdapter {
         }
 
         // Default to requesting entries from our personal pending queue.
-        switchToPpl("0-0");
+        advancePplOffset("0-0");
     }
 
     @Override
@@ -94,7 +94,7 @@ public class JedisRedisAdapter implements JedisAdapter {
     }
 
     @Override
-    public void switchToPpl(final String lastMsgId) {
+    public void advancePplOffset(final String lastMsgId) {
         streamPositionKey = new AbstractMap.SimpleEntry<>(
             config.getStreamKey(),
             new StreamEntryID(lastMsgId)

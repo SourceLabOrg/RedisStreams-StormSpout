@@ -70,7 +70,7 @@ public class JedisClient implements Client {
         adapter.connect();
 
         // Start consuming from PPL at first entry.
-        adapter.switchToPpl("0-0");
+        adapter.advancePplOffset("0-0");
     }
 
     @Override
@@ -96,7 +96,7 @@ public class JedisClient implements Client {
             } else {
                 // Advance last index consumed from PPL so we don't continue to replay old messages.
                 final String lastId = messages.get(messages.size() - 1).getId();
-                adapter.switchToPpl(lastId);
+                adapter.advancePplOffset(lastId);
             }
         }
         return messages;

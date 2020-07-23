@@ -29,7 +29,7 @@ public interface JedisAdapter {
      */
     void close();
 
-    void switchToPpl(final String lastMsgId);
+    void advancePplOffset(final String lastMsgId);
 
     void switchToConsumerGroupMessages();
 }
