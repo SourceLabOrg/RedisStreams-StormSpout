@@ -1,5 +1,6 @@
 package org.sourcelab.storm.spout.redis;
 
+import org.sourcelab.storm.spout.redis.client.ClientType;
 import org.sourcelab.storm.spout.redis.failhandler.NoRetryHandler;
 
 import java.io.Serializable;
@@ -71,6 +72,11 @@ public class RedisStreamSpoutConfig implements Serializable {
     private final boolean metricsEnabled;
 
     /**
+     * Defines which underlying client library/implementation to use.
+     */
+    private final ClientType clientType;
+
+    /**
      * Constructor.
      * Use Builder instance.
      */
@@ -85,7 +91,7 @@ public class RedisStreamSpoutConfig implements Serializable {
 
         // Other settings
         final int maxConsumePerRead, final int maxTupleQueueSize, final int maxAckQueueSize, final long consumerDelayMillis,
-        final boolean metricsEnabled
+        final boolean metricsEnabled, final ClientType clientType
     ) {
         // Connection
         if (redisCluster != null && redisServer != null) {
@@ -117,6 +123,9 @@ public class RedisStreamSpoutConfig implements Serializable {
         this.maxAckQueueSize = maxAckQueueSize;
         this.consumerDelayMillis = consumerDelayMillis;
         this.metricsEnabled = metricsEnabled;
+
+        // Client type implementation
+        this.clientType = Objects.requireNonNull(clientType);
     }
 
     public String getStreamKey() {
@@ -150,6 +159,17 @@ public class RedisStreamSpoutConfig implements Serializable {
         return redisCluster.getConnectString();
     }
 
+    /**
+     * The URI for connecting to this Redis Server instance with the password masked.
+     * @return URI for the server.
+     */
+    public String getConnectStringMasked() {
+        if (!isConnectingToCluster()) {
+            return redisServer.getConnectStringMasked();
+        }
+        return redisCluster.getConnectStringMasked();
+    }
+
     public int getMaxTupleQueueSize() {
         return maxTupleQueueSize;
     }
@@ -172,6 +192,10 @@ public class RedisStreamSpoutConfig implements Serializable {
 
     public boolean isMetricsEnabled() {
         return metricsEnabled;
+    }
+
+    public ClientType getClientType() {
+        return clientType;
     }
 
     /**
@@ -217,6 +241,12 @@ public class RedisStreamSpoutConfig implements Serializable {
         private int maxAckQueueSize = 1024;
         private long consumerDelayMillis = 1000L;
         private boolean metricsEnabled = true;
+
+        /**
+         * Underlying library to use.
+         * Defaults to using Lettuce.
+         */
+        private ClientType clientType = ClientType.LETTUCE;
 
         private Builder() {
         }
@@ -386,6 +416,27 @@ public class RedisStreamSpoutConfig implements Serializable {
         }
 
         /**
+         * Configure the spout to use the Lettuce client library for communicating with redis.
+         * @return Builder instance.
+         */
+        public Builder withLettuceClientLibrary() {
+            return withClientType(ClientType.LETTUCE);
+        }
+
+        /**
+         * Configure the spout to use the Jedis client library for communicating with redis.
+         * @return Builder instance.
+         */
+        public Builder withJedisClientLibrary() {
+            return withClientType(ClientType.JEDIS);
+        }
+
+        public Builder withClientType(final ClientType clientType) {
+            this.clientType = Objects.requireNonNull(clientType);
+            return this;
+        }
+
+        /**
          * Creates new Configuration instance.
          * @return Configuration instance.
          */
@@ -405,7 +456,10 @@ public class RedisStreamSpoutConfig implements Serializable {
                 tupleConverter, failureHandler,
                 // Other settings
                 maxConsumePerRead, maxTupleQueueSize, maxAckQueueSize, consumerDelayMillis,
-                metricsEnabled
+                metricsEnabled,
+
+                // Underlying client type
+                clientType
             );
         }
     }
@@ -443,6 +497,16 @@ public class RedisStreamSpoutConfig implements Serializable {
         public String getConnectString() {
             return getServers().stream()
                 .map(RedisServer::getConnectString)
+                .collect(Collectors.joining(","));
+        }
+
+        /**
+         * The URI for connecting to this Redis Server instance with the password masked.
+         * @return URI for the server.
+         */
+        public String getConnectStringMasked() {
+            return getServers().stream()
+                .map(RedisServer::getConnectStringMasked)
                 .collect(Collectors.joining(","));
         }
     }
@@ -497,6 +561,21 @@ public class RedisStreamSpoutConfig implements Serializable {
 
             if (getPassword() != null && !getPassword().trim().isEmpty()) {
                 connectStr += getPassword() + "@";
+            }
+            connectStr += getHost() + ":" + getPort();
+
+            return connectStr;
+        }
+
+        /**
+         * The URI for connecting to this Redis Server instance with the password masked.
+         * @return URI for the server.
+         */
+        public String getConnectStringMasked() {
+            String connectStr = "redis://";
+
+            if (getPassword() != null && !getPassword().trim().isEmpty()) {
+                connectStr += "XXXXXX@";
             }
             connectStr += getHost() + ":" + getPort();
 

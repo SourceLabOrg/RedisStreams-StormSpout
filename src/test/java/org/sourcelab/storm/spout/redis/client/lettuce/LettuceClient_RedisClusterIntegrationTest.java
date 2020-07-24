@@ -1,6 +1,9 @@
-package org.sourcelab.storm.spout.redis.client;
+package org.sourcelab.storm.spout.redis.client.lettuce;
 
 import org.junit.jupiter.api.Tag;
+import org.sourcelab.storm.spout.redis.RedisStreamSpoutConfig;
+import org.sourcelab.storm.spout.redis.client.AbstractClientIntegrationTest;
+import org.sourcelab.storm.spout.redis.client.Client;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -11,11 +14,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * This integration test verifies LettuceClient against a RedisCluster instance to verify
  * things work as expected when consuming from a RedisCluster.
  *
- * Test cases are defined in {@link AbstractLettuceClientIntegrationTest}.
+ * Test cases are defined in {@link AbstractClientIntegrationTest}.
  */
 @Testcontainers
 @Tag("Integration")
-public class LettuceClient_RedisClusterIntegrationTest extends AbstractLettuceClientIntegrationTest {
+public class LettuceClient_RedisClusterIntegrationTest extends AbstractClientIntegrationTest {
     /**
      * This test depends on the following Redis Container.
      */
@@ -23,7 +26,12 @@ public class LettuceClient_RedisClusterIntegrationTest extends AbstractLettuceCl
     public RedisTestContainer redisContainer = RedisTestContainer.newRedisClusterContainer();
 
     @Override
-    RedisTestContainer getTestContainer() {
+    public RedisTestContainer getTestContainer() {
         return redisContainer;
+    }
+
+    @Override
+    public Client createClient(final RedisStreamSpoutConfig config, final int instanceId) {
+        return new LettuceClient(config, instanceId);
     }
 }

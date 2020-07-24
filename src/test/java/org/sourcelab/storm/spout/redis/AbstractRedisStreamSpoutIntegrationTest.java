@@ -1,16 +1,17 @@
 package org.sourcelab.storm.spout.redis;
 
 import org.apache.storm.generated.StreamInfo;
-import org.apache.storm.spout.ISpout;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.IRichSpout;
 import org.apache.storm.topology.OutputFieldsGetter;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.utils.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.sourcelab.storm.spout.redis.client.ClientType;
 import org.sourcelab.storm.spout.redis.example.TestTupleConverter;
 import org.sourcelab.storm.spout.redis.failhandler.RetryFailedTuples;
 import org.sourcelab.storm.spout.redis.util.outputcollector.EmittedTuple;
@@ -19,6 +20,7 @@ import org.sourcelab.storm.spout.redis.util.test.RedisTestContainer;
 import org.sourcelab.storm.spout.redis.util.test.RedisTestHelper;
 import org.sourcelab.storm.spout.redis.util.test.StreamConsumerInfo;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -103,8 +106,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Most basic lifecycle smoke test.
      */
-    @Test
-    void smokeTest_openAndClose() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_openAndClose(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create spout
         try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
 
@@ -112,6 +119,8 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
 
             // Open spout
             spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            spout.activate();
+            spout.deactivate();
 
             // Close spout via autocloseable
         }
@@ -122,9 +131,14 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
 
     /**
      * Basic lifecycle smoke test.
+     * Basically validating that nothing explodes.
      */
-    @Test
-    void smokeTest_openActivateDeactivateAndClose() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_openActivateDeactivateAndClose(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create spout
         try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
             final StubSpoutCollector collector = new StubSpoutCollector();
@@ -138,8 +152,45 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
             // Small sleep
             Thread.sleep(3000L);
 
-            // Deactivate and close via Autoclosable
+            // Deactivate and close via Autocloseable
             spout.deactivate();
+        }
+
+        // Verify mocks
+        verify(mockTopologyContext, times(1)).getThisTaskIndex();
+    }
+
+    /**
+     * Basic lifecycle smoke test.
+     * Cycle calling activate/deactivate a few times.
+     */
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_cycleActivateDeactivate(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
+        // Create spout
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
+
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+
+            // Cycle Activate and Deactivate a few times
+            spout.activate();
+            Thread.sleep(2000L);
+            spout.deactivate();
+
+            spout.activate();
+            Thread.sleep(2000L);
+            spout.deactivate();
+
+            spout.activate();
+            Thread.sleep(2000L);
+            spout.deactivate();
+
+            // Close via Autocloseable.
         }
 
         // Verify mocks
@@ -152,7 +203,10 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
      *
      * Disabled for now.
      */
-    void smokeTest_configureInvalidRedisHost() throws InterruptedException {
+    void smokeTest_configureInvalidRedisHost(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Lets override the redis host with something invalid
         configBuilder
             .withServer(getTestContainer().getHost(), 124);
@@ -182,14 +236,18 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
         }
 
         // Verify mocks
-        verify(mockTopologyContext, times(1)).getThisTaskIndex();
+        verify(mockTopologyContext, times(2)).getThisTaskIndex();
     }
 
     /**
      * Basic usage test.
      */
-    @Test
-    void smokeTest_consumeAndAckMessages() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_consumeAndAckMessages(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create spout
         try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
             final StubSpoutCollector collector = new StubSpoutCollector();
@@ -203,13 +261,16 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
             // Lets publish 10 messages to the stream
             final List<String> producedMsgIds = redisTestHelper.produceMessages(streamKey, 10);
 
-            // Now lets try to get those from the spout
-            do {
-                spout.nextTuple();
-                Thread.sleep(100L);
-            } while (collector.getEmittedTuples().size() < 10);
+            // Now lets try to get those from the spout.
+            // Call spout.nextTuple() until the spout has emitted 10 tuples.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    spout.nextTuple();
+                    return collector.getEmittedTuples().size() == 10;
+                });
 
-            // Call next tuple a few more times, should be a no-op
+            // Call next tuple a few more times, should be a no-op nothing further should be emitted.
             for (int counter = 0; counter < 10; counter++) {
                 Thread.sleep(100L);
                 spout.nextTuple();
@@ -217,7 +278,6 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
 
             // Verify what got emitted.
             assertEquals(10, collector.getEmittedTuples().size(), "Should have found 10 emitted tuples.");
-
             final String expectedStreamId = Utils.DEFAULT_STREAM_ID;
             for (int index = 0; index < producedMsgIds.size(); index++) {
                 final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
@@ -243,27 +303,33 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
                 assertTrue(foundValue, "Failed to find msgId tuple value");
             }
 
-            // See that we have 10 items pending
-            StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-            assertNotNull(consumerInfo, "Failed to find consumer info!");
+            // See that we have 10 items pending in the stream's consumer list.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    final StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+                    assertNotNull(consumerInfo, "Failed to find consumer info!");
 
-            // Verify we have 10 items pending
-            assertEquals(10L, consumerInfo.getPending(), "Found entries pending");
+                    // Verify we have 10 items pending
+                    return consumerInfo.getPending() == 10;
+                });
 
             // Now Ack the messages
             collector.getEmittedTuples().stream()
                 .map(EmittedTuple::getMessageId)
                 .forEach(spout::ack);
 
-            // Small delay waiting for processing.
-            Thread.sleep(1000L);
+            // We should see the number of pending messages for our consumer drop to 0
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    // Verify that our message were acked in redis.
+                    final StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+                    assertNotNull(consumerInfo, "Failed to find consumer info!");
 
-            // Verify that our message were acked in redis.
-            consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-            assertNotNull(consumerInfo, "Failed to find consumer info!");
-
-            // Verify we have nothing pending
-            assertEquals(0L, consumerInfo.getPending(), "Found entries pending?");
+                    // Verify we have nothing pending
+                    return consumerInfo.getPending() == 0;
+                });
 
             // Deactivate and close via Autocloseable
             spout.deactivate();
@@ -276,9 +342,13 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Basic usage with retry failure handler.
      */
-    @Test
-    void smokeTest_consumeFailAndAckMessages() throws InterruptedException {
-        // Swap out failure handler
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_consumeFailAndAckMessages(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
+        // Swap out failure handler, each tuple should be retried a maximum of twice.
         configBuilder.withFailureHandler(new RetryFailedTuples(2));
 
         // Create spout
@@ -295,15 +365,16 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
             List<String> producedMsgIds = redisTestHelper.produceMessages(streamKey, 10);
 
             // Now lets try to get 5 of those those from the spout...
-            do {
-                spout.nextTuple();
-                Thread.sleep(100L);
-            } while (collector.getEmittedTuples().size() < 5);
-
+            // Call spout.nextTuple() until we have at least 5 tuples emitted to the output collector.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    spout.nextTuple();
+                    return collector.getEmittedTuples().size() == 5;
+                });
 
             // Verify what got emitted.
-            assertEquals(5, collector.getEmittedTuples().size(), "Should have found 10 emitted tuples.");
-
+            assertEquals(5, collector.getEmittedTuples().size(), "Should have found 5 emitted tuples.");
             final String expectedStreamId = Utils.DEFAULT_STREAM_ID;
             for (int index = 0; index < 5; index++) {
                 final EmittedTuple emittedTuple = collector.getEmittedTuples().get(index);
@@ -329,13 +400,17 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
                 assertTrue(foundValue, "Failed to find msgId tuple value");
             }
 
-            // See that we have 10 items pending
+            // Since we have NOT acked any tuples, we should have at least 5 tuples pending with a max of 10
+            // depending on how many have been consumed by the spout's consuming thread.
             StreamConsumerInfo consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
             assertNotNull(consumerInfo, "Failed to find consumer info!");
-            assertEquals(10L, consumerInfo.getPending(), "Found entries pending");
+            assertTrue(consumerInfo.getPending() >= 5, "At least 5 entries pending");
+            assertTrue(consumerInfo.getPending() <= 10, "No more than 10 entries pending");
 
+            // We want to setup the following scenario using the 5 tuples the spout has emitted so far.
+            // ack the first 3 messages
+            // fail the last 2 messages.
             final List<String> messageIdsToFail = new ArrayList<>();
-
             for (int index = 0; index < 5; index++) {
                 // Now ack the first 3 messages
                 if (index < 3) {
@@ -355,38 +430,48 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
             collector.reset();
 
             // Small delay waiting for processing.
-            Thread.sleep(1000L);
+            // Wait until we have at least 7 pending, which is our 10 total messages, minus the 3 acked ones.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    final StreamConsumerInfo consumerState = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
 
-            // Verify that our message were acked in redis.
-            consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-            assertNotNull(consumerInfo, "Failed to find consumer info!");
+                    // Verify that our message were acked in redis.
+                    assertNotNull(consumerState, "Failed to find consumer info!");
 
-            // Verify we have 7 pending
-            assertEquals(7L, consumerInfo.getPending(), "Found entries pending");
+                    return consumerState.getPending() == 7;
+                });
 
-            // Ask for the next two tuples, we should get our failed tuples back out.
-            do {
-                spout.nextTuple();
-            } while (collector.getEmittedTuples().size() < 2);
+            // Ask the spout for the next two tuples,
+            // The expectation here is that we should get our failed tuples back out.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    spout.nextTuple();
+                    return collector.getEmittedTuples().size() == 2;
+                });
 
-            // We should have emitted two tuples.
+            // We should have emitted two tuples, and they should have been our failed tuples.
             assertEquals(2, collector.getEmittedTuples().size());
             assertEquals(messageIdsToFail.get(0), collector.getEmittedTuples().get(0).getMessageId());
             assertEquals(messageIdsToFail.get(1), collector.getEmittedTuples().get(1).getMessageId());
 
-            // Ack them
+            // Ack the previously failed tuples.
             spout.ack(messageIdsToFail.get(0));
             spout.ack(messageIdsToFail.get(1));
 
             // Small delay waiting for processing.
-            Thread.sleep(1000L);
+            // We're looking for the number of pending to drop to 5, since we've now acked 5 of the 10 original tuples.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> {
+                    // Verify that our message were acked in redis.
+                    final StreamConsumerInfo consumerState = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
+                    assertNotNull(consumerState, "Failed to find consumer info!");
 
-            // Verify that our message were acked in redis.
-            consumerInfo = redisTestHelper.getConsumerInfo(streamKey, GROUP_NAME, CONSUMER_ID);
-            assertNotNull(consumerInfo, "Failed to find consumer info!");
-
-            // Verify we have 5 pending
-            assertEquals(5L, consumerInfo.getPending(), "Found entries pending");
+                    // Verify we have 5 pending
+                    return consumerState.getPending() == 5;
+                });
 
             // Deactivate and close via Autocloseable
             spout.deactivate();
@@ -399,8 +484,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Verify declareOutputFields using TestTupleConverter.
      */
-    @Test
-    void test_declareOutputFields() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void test_declareOutputFields(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create a test implementation
         final TupleConverter converter = new DummyTupleConverter() ;
 
@@ -446,8 +535,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     /**
      * Verify spout emits tuples down the correct stream.
      */
-    @Test
-    void test_EmitDownSeparateStreams() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void test_EmitDownSeparateStreams(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create a test implementation
         final TupleConverter converter = new DummyTupleConverter() ;
 
@@ -460,6 +553,7 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
 
             // Open spout
             spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            spout.activate();
 
             // Ask for stream names
             final OutputFieldsGetter getter = new OutputFieldsGetter();
@@ -505,8 +599,12 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
      * Verify if tuple converter instance returns null, then the message
      * is simply acked and nothing is emitted.
      */
-    @Test
-    void test_NullConversionJustGetsAckedNothingEmitted() {
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void test_NullConversionJustGetsAckedNothingEmitted(final ClientType clientType) {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
         // Create a test implementation
         final TupleConverter converter = new NullTupleConverter() ;
 

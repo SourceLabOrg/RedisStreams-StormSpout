@@ -1,4 +1,4 @@
-package org.sourcelab.storm.spout.redis.client;
+package org.sourcelab.storm.spout.redis.client.lettuce;
 
 import io.lettuce.core.api.sync.RedisStreamCommands;
 

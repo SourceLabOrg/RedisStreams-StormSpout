@@ -6,7 +6,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- *
+ * Runs Spout integration tests against a RedisCluster.
  */
 @Testcontainers
 @Tag("Integration")

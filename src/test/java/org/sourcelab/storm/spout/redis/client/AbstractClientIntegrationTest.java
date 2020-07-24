@@ -15,26 +15,28 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Abstract Integration test over LettuceClient.
+ * Abstract Integration test over Client implementations.
  * Used as a base to test the client against both a single Redis instance, and against
  * a RedisCluster instance.
  */
-abstract class AbstractLettuceClientIntegrationTest {
+public abstract class AbstractClientIntegrationTest {
     private static final String CONSUMER_ID_PREFIX = "ConsumerId";
     private static final int MAX_CONSUMED_PER_READ = 10;
 
     private RedisTestHelper redisTestHelper;
 
     private RedisStreamSpoutConfig config;
-    private LettuceClient client;
+    private Client client;
     private String streamKey;
 
-    abstract RedisTestContainer getTestContainer();
+    public abstract RedisTestContainer getTestContainer();
+    public abstract Client createClient(final RedisStreamSpoutConfig config, final int instanceId);
 
     @BeforeEach
     void setUp(){
@@ -45,7 +47,7 @@ abstract class AbstractLettuceClientIntegrationTest {
         config = createConfiguration(CONSUMER_ID_PREFIX + "1");
 
         // Create client instance under test.
-        client = new LettuceClient(config, 1);
+        client = createClient(config, 1);
 
         // Create test helper instance.
         redisTestHelper = getTestContainer().getRedisTestHelper();
@@ -131,7 +133,7 @@ abstract class AbstractLettuceClientIntegrationTest {
     void testConsumeMultipleConsumers() {
         // Define 2nd client, but don't connect yet
         final RedisStreamSpoutConfig config2 = createConfiguration(CONSUMER_ID_PREFIX + "2");
-        final LettuceClient client2 = new LettuceClient(config2, 2);
+        final Client client2 = createClient(config2, 2);
 
         try {
             // Connect first client
@@ -185,7 +187,7 @@ abstract class AbstractLettuceClientIntegrationTest {
     void testConsumeMultipleConsumers_scenario2() {
         // Define 2nd client, but don't connect yet
         final RedisStreamSpoutConfig config2 = createConfiguration(CONSUMER_ID_PREFIX + "2");
-        final LettuceClient client2 = new LettuceClient(config2, 2);
+        final Client client2 = createClient(config2, 2);
 
         try {
             // Connect first client
@@ -283,13 +285,76 @@ abstract class AbstractLettuceClientIntegrationTest {
         // Write more messages to stream while client is disconnected.
         expectedMessageIds = redisTestHelper.produceMessages(streamKey, MAX_CONSUMED_PER_READ);
 
-        // Create new client using the same client
-        final LettuceClient client2 = new LettuceClient(config, 1);
+        // Create new client using the same config
+        final Client client2 = createClient(config, 1);
         client2.connect();
 
         // Consume messages, should be the messages we got.
         messages = client2.nextMessages();
         verifyConsumedMessagesInOrder(expectedMessageIds, messages);
+
+        client2.disconnect();
+    }
+
+    /**
+     * 1. Connect, consume 10 messages, but only commit 5, then disconnect.
+     * 2. Create a new client using the same configuration and consume.  We should receive the 5 uncommitted messages.
+     */
+    @Test
+    void testConsumeUncommittedMessages_withReconnect() {
+        // Connect
+        client.connect();
+
+        // Ask for messages.
+        List<Message> messages = client.nextMessages();
+        assertNotNull(messages, "Should be non-null");
+        assertTrue(messages.isEmpty(), "Should be empty");
+
+        // Now Submit more messages to the stream
+        List<String> expectedMessageIds = redisTestHelper.produceMessages(streamKey, MAX_CONSUMED_PER_READ);
+
+        // Ask for the next messages
+        messages = client.nextMessages();
+
+        // Validate
+        verifyConsumedMessagesInOrder(expectedMessageIds, messages);
+
+        // Commit the first half
+        final List<String> uncommittedMessageIds = new ArrayList<>();
+        for (int index = 0; index < messages.size(); index ++) {
+            final String msgId = messages.get(index).getId();
+            // Commit the first half
+            if (index < (MAX_CONSUMED_PER_READ / 2)) {
+                client.commitMessage(msgId);
+            } else {
+                // Remember the uncommitted messages.
+                uncommittedMessageIds.add(msgId);
+            }
+        }
+        // Sanity check
+        assertFalse(uncommittedMessageIds.isEmpty(), "[SANITY CHECK] Should have uncommitted messages");
+
+        // Ask for messages, should be empty
+        messages = client.nextMessages();
+        assertNotNull(messages, "Should be non-null");
+        assertEquals(0, messages.size(), "Should be empty");
+
+        // Disconnect client.
+        client.disconnect();
+
+        // Create new client using the same config
+        final Client client2 = createClient(config, 1);
+        client2.connect();
+
+        // Consume messages, should be the uncommitted messages
+        messages = client2.nextMessages();
+
+        // We should have the uncommitted messages.
+        verifyConsumedMessagesInOrder(uncommittedMessageIds, messages);
+
+        // Consume again should be empty
+        messages = client2.nextMessages();
+        assertTrue(messages.isEmpty(), "Should be empty list of messages");
 
         client2.disconnect();
     }

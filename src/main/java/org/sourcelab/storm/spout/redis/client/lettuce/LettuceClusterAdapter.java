@@ -1,29 +1,28 @@
-package org.sourcelab.storm.spout.redis.client;
+package org.sourcelab.storm.spout.redis.client.lettuce;
 
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisStreamCommands;
+import io.lettuce.core.cluster.RedisClusterClient;
+import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 
 import java.util.Objects;
 
 /**
- * Adapter for talking to a single Redis instance.
- * If you need to talk to a RedisCluster {@link LettuceClusterAdapter}.
+ * Adapter for talking to a RedisCluster.
+ * If you need to talk to a single Redis instance {@link LettuceRedisAdapter}.
  */
-public class LettuceRedisAdapter implements LettuceAdapter {
-
+public class LettuceClusterAdapter implements LettuceAdapter {
     /**
      * The underlying Redis Client.
      */
-    private final RedisClient redisClient;
+    private final RedisClusterClient redisClient;
 
     /**
      * Underlying connection objects.
      */
-    private StatefulRedisConnection<String, String> connection;
+    private StatefulRedisClusterConnection<String, String> connection;
     private RedisStreamCommands<String, String> syncCommands;
 
-    public LettuceRedisAdapter(final RedisClient redisClient) {
+    public LettuceClusterAdapter(final RedisClusterClient redisClient) {
         this.redisClient = Objects.requireNonNull(redisClient);
     }
 

@@ -3,9 +3,9 @@ package org.sourcelab.storm.spout.redis.util.test;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.cluster.RedisClusterClient;
-import org.sourcelab.storm.spout.redis.client.LettuceAdapter;
-import org.sourcelab.storm.spout.redis.client.LettuceClusterAdapter;
-import org.sourcelab.storm.spout.redis.client.LettuceRedisAdapter;
+import org.sourcelab.storm.spout.redis.client.lettuce.LettuceAdapter;
+import org.sourcelab.storm.spout.redis.client.lettuce.LettuceClusterAdapter;
+import org.sourcelab.storm.spout.redis.client.lettuce.LettuceRedisAdapter;
 
 import java.util.ArrayList;
 import java.util.HashMap;

@@ -6,7 +6,7 @@
 
     <groupId>org.sourcelab.storm.spout</groupId>
     <artifactId>redis-stream-spout</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 
     <!-- Module Description and Ownership -->
     <name>Redis Streams Spout for Apache Storm.</name>
@@ -48,6 +48,7 @@
 
         <!-- Redis Client -->
         <lettuceVersion>5.3.1.RELEASE</lettuceVersion>
+        <jedisVersion>3.2.0</jedisVersion>
 
         <!-- Define which version of JUnit 5 to -->
         <junit5Version>5.6.2</junit5Version>
@@ -77,6 +78,11 @@
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
             <version>${lettuceVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>${jedisVersion}</version>
         </dependency>
 
         <!-- Testing Dependencies -->
@@ -118,6 +124,14 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${testContainersVersion}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Async Testing Helper -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
