@@ -18,7 +18,7 @@ Include the dependency in your `POM.xml` file:
 <dependency>
     <groupId>org.sourcelab.storm.spout</groupId>
     <artifactId>redis-stream-spout</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```  
 
