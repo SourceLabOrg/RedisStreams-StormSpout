@@ -126,6 +126,14 @@
             <version>${testContainersVersion}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Async Testing Helper -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.3</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
