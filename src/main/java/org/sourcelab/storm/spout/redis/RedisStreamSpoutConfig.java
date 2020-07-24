@@ -415,10 +415,18 @@ public class RedisStreamSpoutConfig implements Serializable {
             return this;
         }
 
+        /**
+         * Configure the spout to use the Lettuce client library for communicating with redis.
+         * @return Builder instance.
+         */
         public Builder withLettuceClientLibrary() {
             return withClientType(ClientType.LETTUCE);
         }
 
+        /**
+         * Configure the spout to use the Jedis client library for communicating with redis.
+         * @return Builder instance.
+         */
         public Builder withJedisClientLibrary() {
             return withClientType(ClientType.JEDIS);
         }
