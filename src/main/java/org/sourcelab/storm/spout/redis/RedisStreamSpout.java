@@ -84,16 +84,8 @@ public class RedisStreamSpout implements IRichSpout, AutoCloseable {
         // Create funnel instance.
         this.funnel = new MemoryFunnel(config, spoutConfig, topologyContext);
 
-        // Create consumer and client
-        final int taskIndex = topologyContext.getThisTaskIndex();
-        final Client client = new ClientFactory().createClient(config, taskIndex);
-        final Consumer consumer = new Consumer(config, client, (ConsumerFunnel) funnel);
-
-        // Create background consuming thread.
-        consumerThread = new Thread(
-            consumer,
-            "RedisStreamSpout-ConsumerThread[" + taskIndex + "]"
-        );
+        // Create and start consumer thread.
+        createAndStartConsumerThread();
     }
 
     @Override
@@ -104,12 +96,15 @@ public class RedisStreamSpout implements IRichSpout, AutoCloseable {
 
     @Override
     public void activate() {
-        if (consumerThread.isAlive()) {
+        // If the thread is already running and alive
+        if (consumerThread != null && consumerThread.isAlive()) {
             // No-op.  It's already running, and deactivate() is a no-op for us.
             return;
         }
-        // Start thread, this should return immediately, but start a background processing thread.
-        consumerThread.start();
+
+        // If we haven't created the consumer thread yet, or it has previously died.
+        // Create and start it
+        createAndStartConsumerThread();
     }
 
     @Override
@@ -186,5 +181,22 @@ public class RedisStreamSpout implements IRichSpout, AutoCloseable {
     @Override
     public Map<String, Object> getComponentConfiguration() {
         return new HashMap<>();
+    }
+
+    /**
+     * Create background consumer thread.
+     */
+    private void createAndStartConsumerThread() {
+        // Create consumer and client
+        final int taskIndex = topologyContext.getThisTaskIndex();
+        final Client client = new ClientFactory().createClient(config, taskIndex);
+        final Consumer consumer = new Consumer(config, client, (ConsumerFunnel) funnel);
+
+        // Create background consuming thread.
+        consumerThread = new Thread(
+            consumer,
+            "RedisStreamSpout-ConsumerThread[" + taskIndex + "]"
+        );
+        consumerThread.start();
     }
 }

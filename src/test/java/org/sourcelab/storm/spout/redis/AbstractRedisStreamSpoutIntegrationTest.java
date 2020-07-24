@@ -119,6 +119,8 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
 
             // Open spout
             spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            spout.activate();
+            spout.deactivate();
 
             // Close spout via autocloseable
         }
@@ -159,13 +161,48 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
     }
 
     /**
+     * Basic lifecycle smoke test.
+     * Cycle calling activate/deactivate a few times.
+     */
+    @ParameterizedTest
+    @EnumSource(ClientType.class)
+    void smokeTest_cycleActivateDeactivate(final ClientType clientType) throws InterruptedException {
+        // Inject client type into config
+        configBuilder.withClientType(clientType);
+
+        // Create spout
+        try (final RedisStreamSpout spout = new RedisStreamSpout(configBuilder.build())) {
+            final StubSpoutCollector collector = new StubSpoutCollector();
+
+            // Open spout
+            spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+
+            // Cycle Activate and Deactivate a few times
+            spout.activate();
+            Thread.sleep(2000L);
+            spout.deactivate();
+
+            spout.activate();
+            Thread.sleep(2000L);
+            spout.deactivate();
+
+            spout.activate();
+            Thread.sleep(2000L);
+            spout.deactivate();
+
+            // Close via Autocloseable.
+        }
+
+        // Verify mocks
+        verify(mockTopologyContext, times(1)).getThisTaskIndex();
+    }
+
+    /**
      * Verifies the behavior when you attempt to connect to a redis instance
      * that does not exist.  Looks like nothing. You get errors in the logs.
      *
      * Disabled for now.
      */
-//    @ParameterizedTest
-//    @EnumSource(ClientType.class)
     void smokeTest_configureInvalidRedisHost(final ClientType clientType) throws InterruptedException {
         // Inject client type into config
         configBuilder.withClientType(clientType);
@@ -199,7 +236,7 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
         }
 
         // Verify mocks
-        verify(mockTopologyContext, times(1)).getThisTaskIndex();
+        verify(mockTopologyContext, times(2)).getThisTaskIndex();
     }
 
     /**
@@ -516,6 +553,7 @@ abstract class AbstractRedisStreamSpoutIntegrationTest {
 
             // Open spout
             spout.open(stormConfig, mockTopologyContext, new SpoutOutputCollector(collector));
+            spout.activate();
 
             // Ask for stream names
             final OutputFieldsGetter getter = new OutputFieldsGetter();
